@@ -1,4 +1,4 @@
-name: Check codeql-analyzer  dist
+name: Check Transpiled JavaScript
 
 on:
   pull_request:
