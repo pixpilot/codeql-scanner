@@ -28,7 +28,6 @@ on:
 # -------------------------------------------------------------
 # Alternative: Reusable workflow for code scanning
 # -------------------------------------------------------------
-
 jobs:
   analyze:
     runs-on: ubuntu-latest
