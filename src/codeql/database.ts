@@ -30,28 +30,42 @@ export class CodeQLDatabase {
     const packageJsonBackupPath = FileUtils.joinPath(filteredPath, 'package.json.bak');
     let needsCleanup = false;
     // --- END: ADDED CODE FOR THE FIX ---
-    Logger.info(`packageJsonPath: ${packageJsonPath}`);
 
     try {
       // --- START: ADDED CODE FOR THE FIX ---
       // Check if package.json exists and contains "type": "module"
+      Logger.info(`Looking for package.json in filtered path: ${packageJsonPath}`);
+
       if (FileUtils.exists(packageJsonPath)) {
+        Logger.info('package.json found. Reading file content.');
         const packageJsonContent = FileUtils.readFile(packageJsonPath);
         try {
           const parsed = JSON.parse(packageJsonContent) as unknown;
           if (typeof parsed === 'object' && parsed !== null && 'type' in parsed) {
             const packageJson = parsed as { type?: unknown };
+            Logger.info(`Detected package.json.type = ${String(packageJson.type)}`);
             if (packageJson.type === 'module') {
               Logger.info(
                 'Temporarily renaming package.json to avoid ESM/CJS conflict with CodeQL extractor.',
               );
               fs.renameSync(packageJsonPath, packageJsonBackupPath);
               needsCleanup = true;
+              Logger.info('package.json was renamed to package.json.bak');
+            } else {
+              Logger.info('package.json.type is not "module". No rename necessary.');
             }
+          } else {
+            Logger.info(
+              'package.json does not contain a "type" field. No rename necessary.',
+            );
           }
-        } catch {
-          Logger.warning('Could not parse package.json. Skipping temporary rename.');
+        } catch (e) {
+          Logger.warning(
+            `Could not parse package.json. Skipping temporary rename. Error: ${e instanceof Error ? e.message : String(e)}`,
+          );
         }
+      } else {
+        Logger.info('No package.json found in filtered path.');
       }
       // --- END: ADDED CODE FOR THE FIX ---
 

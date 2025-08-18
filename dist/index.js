@@ -33265,25 +33265,38 @@ var CodeQLDatabase = class {
     const packageJsonPath = FileUtils.joinPath(filteredPath, "package.json");
     const packageJsonBackupPath = FileUtils.joinPath(filteredPath, "package.json.bak");
     let needsCleanup = false;
-    Logger.info(`packageJsonPath: ${packageJsonPath}`);
     try {
+      Logger.info(`Looking for package.json in filtered path: ${packageJsonPath}`);
       if (FileUtils.exists(packageJsonPath)) {
+        Logger.info("package.json found. Reading file content.");
         const packageJsonContent = FileUtils.readFile(packageJsonPath);
         try {
           const parsed = JSON.parse(packageJsonContent);
           if (typeof parsed === "object" && parsed !== null && "type" in parsed) {
             const packageJson = parsed;
+            Logger.info(`Detected package.json.type = ${String(packageJson.type)}`);
             if (packageJson.type === "module") {
               Logger.info(
                 "Temporarily renaming package.json to avoid ESM/CJS conflict with CodeQL extractor."
               );
               fs2.renameSync(packageJsonPath, packageJsonBackupPath);
               needsCleanup = true;
+              Logger.info("package.json was renamed to package.json.bak");
+            } else {
+              Logger.info('package.json.type is not "module". No rename necessary.');
             }
+          } else {
+            Logger.info(
+              'package.json does not contain a "type" field. No rename necessary.'
+            );
           }
-        } catch {
-          Logger.warning("Could not parse package.json. Skipping temporary rename.");
+        } catch (e) {
+          Logger.warning(
+            `Could not parse package.json. Skipping temporary rename. Error: ${e instanceof Error ? e.message : String(e)}`
+          );
         }
+      } else {
+        Logger.info("No package.json found in filtered path.");
       }
       const args = ["database", "create", dbPath];
       if (isMultiLanguage) {
