@@ -33264,7 +33264,13 @@ var CodeQLDatabase = class {
     Logger.info(`Multi-language analysis: ${isMultiLanguage}`);
     const packageJsonPath = FileUtils.joinPath(filteredPath, "package.json");
     const packageJsonBackupPath = FileUtils.joinPath(filteredPath, "package.json.bak");
+    const rootPackageJsonPath = FileUtils.joinPath(process2.cwd(), "package.json");
+    const rootPackageJsonBackupPath = FileUtils.joinPath(
+      process2.cwd(),
+      "package.json.bak"
+    );
     let needsCleanup = false;
+    let needsRootCleanup = false;
     try {
       Logger.info(`Looking for package.json in filtered path: ${packageJsonPath}`);
       if (FileUtils.exists(packageJsonPath)) {
@@ -33298,6 +33304,38 @@ var CodeQLDatabase = class {
       } else {
         Logger.info("No package.json found in filtered path.");
       }
+      Logger.info(`Looking for package.json in root path: ${rootPackageJsonPath}`);
+      if (FileUtils.exists(rootPackageJsonPath)) {
+        Logger.info("Root package.json found. Reading file content.");
+        const rootPackageJsonContent = FileUtils.readFile(rootPackageJsonPath);
+        try {
+          const parsed = JSON.parse(rootPackageJsonContent);
+          if (typeof parsed === "object" && parsed !== null && "type" in parsed) {
+            const packageJson = parsed;
+            Logger.info(`Detected root package.json.type = ${String(packageJson.type)}`);
+            if (packageJson.type === "module") {
+              Logger.info(
+                "Temporarily renaming root package.json to avoid ESM/CJS conflict with CodeQL extractor."
+              );
+              fs2.renameSync(rootPackageJsonPath, rootPackageJsonBackupPath);
+              needsRootCleanup = true;
+              Logger.info("Root package.json was renamed to package.json.bak");
+            } else {
+              Logger.info('Root package.json.type is not "module". No rename necessary.');
+            }
+          } else {
+            Logger.info(
+              'Root package.json does not contain a "type" field. No rename necessary.'
+            );
+          }
+        } catch (e) {
+          Logger.warning(
+            `Could not parse root package.json. Skipping temporary rename. Error: ${e instanceof Error ? e.message : String(e)}`
+          );
+        }
+      } else {
+        Logger.info("No package.json found in root path.");
+      }
       const args = ["database", "create", dbPath];
       if (isMultiLanguage) {
         args.push("--db-cluster");
@@ -33313,6 +33351,10 @@ var CodeQLDatabase = class {
       if (needsCleanup) {
         Logger.info("Restoring original package.json.");
         fs2.renameSync(packageJsonBackupPath, packageJsonPath);
+      }
+      if (needsRootCleanup) {
+        Logger.info("Restoring original root package.json.");
+        fs2.renameSync(rootPackageJsonBackupPath, rootPackageJsonPath);
       }
     }
   }
