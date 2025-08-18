@@ -30,6 +30,7 @@ export class CodeQLDatabase {
     const packageJsonBackupPath = FileUtils.joinPath(filteredPath, 'package.json.bak');
     let needsCleanup = false;
     // --- END: ADDED CODE FOR THE FIX ---
+    Logger.info(`packageJsonPath: ${packageJsonPath}`);
 
     try {
       // --- START: ADDED CODE FOR THE FIX ---

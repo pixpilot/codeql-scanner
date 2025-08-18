@@ -33265,6 +33265,7 @@ var CodeQLDatabase = class {
     const packageJsonPath = FileUtils.joinPath(filteredPath, "package.json");
     const packageJsonBackupPath = FileUtils.joinPath(filteredPath, "package.json.bak");
     let needsCleanup = false;
+    Logger.info(`packageJsonPath: ${packageJsonPath}`);
     try {
       if (FileUtils.exists(packageJsonPath)) {
         const packageJsonContent = FileUtils.readFile(packageJsonPath);
