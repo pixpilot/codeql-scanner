@@ -92,12 +92,12 @@ var require_io_util = __commonJS({
     var _a;
     Object.defineProperty(exports2, "__esModule", { value: true });
     exports2.getCmdPath = exports2.tryGetExecutablePath = exports2.isRooted = exports2.isDirectory = exports2.exists = exports2.READONLY = exports2.UV_FS_O_EXLOCK = exports2.IS_WINDOWS = exports2.unlink = exports2.symlink = exports2.stat = exports2.rmdir = exports2.rm = exports2.rename = exports2.readlink = exports2.readdir = exports2.open = exports2.mkdir = exports2.lstat = exports2.copyFile = exports2.chmod = void 0;
-    var fs3 = __importStar(require("fs"));
+    var fs4 = __importStar(require("fs"));
     var path4 = __importStar(require("path"));
-    _a = fs3.promises, exports2.chmod = _a.chmod, exports2.copyFile = _a.copyFile, exports2.lstat = _a.lstat, exports2.mkdir = _a.mkdir, exports2.open = _a.open, exports2.readdir = _a.readdir, exports2.readlink = _a.readlink, exports2.rename = _a.rename, exports2.rm = _a.rm, exports2.rmdir = _a.rmdir, exports2.stat = _a.stat, exports2.symlink = _a.symlink, exports2.unlink = _a.unlink;
+    _a = fs4.promises, exports2.chmod = _a.chmod, exports2.copyFile = _a.copyFile, exports2.lstat = _a.lstat, exports2.mkdir = _a.mkdir, exports2.open = _a.open, exports2.readdir = _a.readdir, exports2.readlink = _a.readlink, exports2.rename = _a.rename, exports2.rm = _a.rm, exports2.rmdir = _a.rmdir, exports2.stat = _a.stat, exports2.symlink = _a.symlink, exports2.unlink = _a.unlink;
     exports2.IS_WINDOWS = process.platform === "win32";
     exports2.UV_FS_O_EXLOCK = 268435456;
-    exports2.READONLY = fs3.constants.O_RDONLY;
+    exports2.READONLY = fs4.constants.O_RDONLY;
     function exists(fsPath) {
       return __awaiter(this, void 0, void 0, function* () {
         try {
@@ -1224,7 +1224,7 @@ var require_file_command = __commonJS({
     Object.defineProperty(exports2, "__esModule", { value: true });
     exports2.prepareKeyValueMessage = exports2.issueFileCommand = void 0;
     var crypto2 = __importStar(require("crypto"));
-    var fs3 = __importStar(require("fs"));
+    var fs4 = __importStar(require("fs"));
     var os = __importStar(require("os"));
     var utils_1 = require_utils();
     function issueFileCommand(command, message) {
@@ -1232,10 +1232,10 @@ var require_file_command = __commonJS({
       if (!filePath) {
         throw new Error(`Unable to find environment variable for file command ${command}`);
       }
-      if (!fs3.existsSync(filePath)) {
+      if (!fs4.existsSync(filePath)) {
         throw new Error(`Missing file at path: ${filePath}`);
       }
-      fs3.appendFileSync(filePath, `${(0, utils_1.toCommandValue)(message)}${os.EOL}`, {
+      fs4.appendFileSync(filePath, `${(0, utils_1.toCommandValue)(message)}${os.EOL}`, {
         encoding: "utf8"
       });
     }
@@ -26717,14 +26717,14 @@ var require_parser = __commonJS({
             case "scalar":
             case "single-quoted-scalar":
             case "double-quoted-scalar": {
-              const fs3 = this.flowScalar(this.type);
+              const fs4 = this.flowScalar(this.type);
               if (atNextItem || it.value) {
-                map.items.push({ start, key: fs3, sep: [] });
+                map.items.push({ start, key: fs4, sep: [] });
                 this.onKeyLine = true;
               } else if (it.sep) {
-                this.stack.push(fs3);
+                this.stack.push(fs4);
               } else {
-                Object.assign(it, { key: fs3, sep: [] });
+                Object.assign(it, { key: fs4, sep: [] });
                 this.onKeyLine = true;
               }
               return;
@@ -26852,13 +26852,13 @@ var require_parser = __commonJS({
             case "scalar":
             case "single-quoted-scalar":
             case "double-quoted-scalar": {
-              const fs3 = this.flowScalar(this.type);
+              const fs4 = this.flowScalar(this.type);
               if (!it || it.value)
-                fc.items.push({ start: [], key: fs3, sep: [] });
+                fc.items.push({ start: [], key: fs4, sep: [] });
               else if (it.sep)
-                this.stack.push(fs3);
+                this.stack.push(fs4);
               else
-                Object.assign(it, { key: fs3, sep: [] });
+                Object.assign(it, { key: fs4, sep: [] });
               return;
             }
             case "flow-map-end":
@@ -28734,7 +28734,7 @@ var require_internal_globber = __commonJS({
     Object.defineProperty(exports2, "__esModule", { value: true });
     exports2.DefaultGlobber = void 0;
     var core3 = __importStar(require_core());
-    var fs3 = __importStar(require("fs"));
+    var fs4 = __importStar(require("fs"));
     var globOptionsHelper = __importStar(require_internal_glob_options_helper());
     var path4 = __importStar(require("path"));
     var patternHelper = __importStar(require_internal_pattern_helper());
@@ -28788,7 +28788,7 @@ var require_internal_globber = __commonJS({
           for (const searchPath of patternHelper.getSearchPaths(patterns)) {
             core3.debug(`Search path '${searchPath}'`);
             try {
-              yield __await(fs3.promises.lstat(searchPath));
+              yield __await(fs4.promises.lstat(searchPath));
             } catch (err) {
               if (err.code === "ENOENT") {
                 continue;
@@ -28819,7 +28819,7 @@ var require_internal_globber = __commonJS({
                 continue;
               }
               const childLevel = item.level + 1;
-              const childItems = (yield __await(fs3.promises.readdir(item.path))).map((x) => new internal_search_state_1.SearchState(path4.join(item.path, x), childLevel));
+              const childItems = (yield __await(fs4.promises.readdir(item.path))).map((x) => new internal_search_state_1.SearchState(path4.join(item.path, x), childLevel));
               stack.push(...childItems.reverse());
             } else if (match2 & internal_match_kind_1.MatchKind.File) {
               yield yield __await(item.path);
@@ -28854,7 +28854,7 @@ var require_internal_globber = __commonJS({
           let stats;
           if (options.followSymbolicLinks) {
             try {
-              stats = yield fs3.promises.stat(item.path);
+              stats = yield fs4.promises.stat(item.path);
             } catch (err) {
               if (err.code === "ENOENT") {
                 if (options.omitBrokenSymbolicLinks) {
@@ -28866,10 +28866,10 @@ var require_internal_globber = __commonJS({
               throw err;
             }
           } else {
-            stats = yield fs3.promises.lstat(item.path);
+            stats = yield fs4.promises.lstat(item.path);
           }
           if (stats.isDirectory() && options.followSymbolicLinks) {
-            const realPath = yield fs3.promises.realpath(item.path);
+            const realPath = yield fs4.promises.realpath(item.path);
             while (traversalChain.length >= item.level) {
               traversalChain.pop();
             }
@@ -28970,7 +28970,7 @@ var require_internal_hash_files = __commonJS({
     exports2.hashFiles = void 0;
     var crypto2 = __importStar(require("crypto"));
     var core3 = __importStar(require_core());
-    var fs3 = __importStar(require("fs"));
+    var fs4 = __importStar(require("fs"));
     var stream = __importStar(require("stream"));
     var util = __importStar(require("util"));
     var path4 = __importStar(require("path"));
@@ -28991,13 +28991,13 @@ var require_internal_hash_files = __commonJS({
               writeDelegate(`Ignore '${file}' since it is not under GITHUB_WORKSPACE.`);
               continue;
             }
-            if (fs3.statSync(file).isDirectory()) {
+            if (fs4.statSync(file).isDirectory()) {
               writeDelegate(`Skip directory '${file}'.`);
               continue;
             }
             const hash = crypto2.createHash("sha256");
             const pipeline = util.promisify(stream.pipeline);
-            yield pipeline(fs3.createReadStream(file), hash);
+            yield pipeline(fs4.createReadStream(file), hash);
             result.write(hash.digest());
             count++;
             if (!hasMatch) {
@@ -33185,7 +33185,7 @@ __export(src_exports, {
 module.exports = __toCommonJS(src_exports);
 
 // src/codeql/analyzer.ts
-var fs2 = __toESM(require("node:fs"));
+var fs3 = __toESM(require("node:fs"));
 var process3 = __toESM(require("node:process"));
 var import_exec3 = __toESM(require_exec());
 
@@ -33250,6 +33250,7 @@ var Logger = class {
 };
 
 // src/codeql/database.ts
+var fs2 = __toESM(require("node:fs"));
 var process2 = __toESM(require("node:process"));
 var import_exec = __toESM(require_exec());
 var CodeQLDatabase = class {
@@ -33261,17 +33262,45 @@ var CodeQLDatabase = class {
     const isMultiLanguage = languages.length > 1;
     Logger.info(`Languages to analyze: ${languages.join(", ")}`);
     Logger.info(`Multi-language analysis: ${isMultiLanguage}`);
-    const args = ["database", "create", dbPath];
-    if (isMultiLanguage) {
-      args.push("--db-cluster");
-      languages.forEach((lang) => {
-        args.push(`--language=${lang}`);
-      });
-    } else {
-      args.push(`--language=${languages[0]}`);
+    const packageJsonPath = FileUtils.joinPath(filteredPath, "package.json");
+    const packageJsonBackupPath = FileUtils.joinPath(filteredPath, "package.json.bak");
+    let needsCleanup = false;
+    try {
+      if (FileUtils.exists(packageJsonPath)) {
+        const packageJsonContent = FileUtils.readFile(packageJsonPath);
+        try {
+          const parsed = JSON.parse(packageJsonContent);
+          if (typeof parsed === "object" && parsed !== null && "type" in parsed) {
+            const packageJson = parsed;
+            if (packageJson.type === "module") {
+              Logger.info(
+                "Temporarily renaming package.json to avoid ESM/CJS conflict with CodeQL extractor."
+              );
+              fs2.renameSync(packageJsonPath, packageJsonBackupPath);
+              needsCleanup = true;
+            }
+          }
+        } catch {
+          Logger.warning("Could not parse package.json. Skipping temporary rename.");
+        }
+      }
+      const args = ["database", "create", dbPath];
+      if (isMultiLanguage) {
+        args.push("--db-cluster");
+        languages.forEach((lang) => {
+          args.push(`--language=${lang}`);
+        });
+      } else {
+        args.push(`--language=${languages[0]}`);
+      }
+      args.push(`--source-root=${filteredPath}`);
+      await (0, import_exec.exec)(codeqlPath, args);
+    } finally {
+      if (needsCleanup) {
+        Logger.info("Restoring original package.json.");
+        fs2.renameSync(packageJsonBackupPath, packageJsonPath);
+      }
     }
-    args.push(`--source-root=${filteredPath}`);
-    await (0, import_exec.exec)(codeqlPath, args);
   }
   static getDatabasePath() {
     return FileUtils.joinPath(process2.cwd(), "codeql-db");
@@ -33514,7 +33543,7 @@ var CodeQLAnalyzer = class {
       for (const packFile of packSarifFiles) {
         if (packFile !== outputPath && FileUtils.exists(packFile)) {
           try {
-            fs2.unlinkSync(packFile);
+            fs3.unlinkSync(packFile);
           } catch {
           }
         }
@@ -33687,10 +33716,10 @@ async function getLatestCodeQLRelease() {
       "-o",
       tempFile
     ]);
-    const fs3 = await import("node:fs/promises");
-    const releaseData = await fs3.readFile(tempFile, "utf8");
+    const fs4 = await import("node:fs/promises");
+    const releaseData = await fs4.readFile(tempFile, "utf8");
     const release = JSON.parse(releaseData);
-    await fs3.unlink(tempFile).catch(() => {
+    await fs4.unlink(tempFile).catch(() => {
     });
     return release;
   } catch (error2) {
