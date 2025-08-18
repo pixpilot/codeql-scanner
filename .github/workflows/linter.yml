@@ -62,7 +62,7 @@ jobs:
       # Lint other files using Super Linter
       - name: Lint Other Files
         id: super-linter
-        uses: super-linter/super-linter/slim@v7
+        uses: super-linter/super-linter/slim@v8
         env:
           DEFAULT_BRANCH: main
           FILTER_REGEX_EXCLUDE: (dist/**/*|package-lock\.json|node_modules/**|\.devcontainer/**|\.vscode/**)
