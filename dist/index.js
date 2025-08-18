@@ -52041,13 +52041,13 @@ __export(index_exports, {
 module.exports = __toCommonJS(index_exports);
 
 // src/codeql/analyzer.ts
-var fs2 = __toESM(require("node:fs"), 1);
-var process3 = __toESM(require("node:process"), 1);
-var import_exec3 = __toESM(require_exec(), 1);
+var fs2 = __toESM(require("node:fs"));
+var process3 = __toESM(require("node:process"));
+var import_exec3 = __toESM(require_exec());
 
 // src/utils/file-utils.ts
-var fs = __toESM(require("node:fs"), 1);
-var path = __toESM(require("node:path"), 1);
+var fs = __toESM(require("node:fs"));
+var path = __toESM(require("node:path"));
 var FileUtils = class {
   static async ensureDirectoryExists(dirPath) {
     if (!fs.existsSync(dirPath)) {
@@ -52086,7 +52086,7 @@ var FileUtils = class {
 };
 
 // src/utils/logger.ts
-var core = __toESM(require_core(), 1);
+var core = __toESM(require_core());
 var Logger = class {
   static info(message) {
     core.info(message);
@@ -52106,8 +52106,8 @@ var Logger = class {
 };
 
 // src/codeql/database.ts
-var process2 = __toESM(require("node:process"), 1);
-var import_exec = __toESM(require_exec(), 1);
+var process2 = __toESM(require("node:process"));
+var import_exec = __toESM(require_exec());
 var CodeQLDatabase = class {
   static async createDatabase(codeqlPath, filteredPath, language, config) {
     Logger.info("Creating CodeQL database from filtered files...");
@@ -52135,7 +52135,7 @@ var CodeQLDatabase = class {
 };
 
 // src/codeql/query-packs.ts
-var import_exec2 = __toESM(require_exec(), 1);
+var import_exec2 = __toESM(require_exec());
 var QueryPackManager = class {
   static async downloadQueryPacks(codeqlPath) {
     if (!codeqlPath || codeqlPath.trim() === "") {
@@ -52449,11 +52449,11 @@ var CodeQLAnalyzer = class {
 };
 
 // src/codeql/installer.ts
-var process8 = __toESM(require("node:process"), 1);
-var import_exec6 = __toESM(require_exec(), 1);
+var process8 = __toESM(require("node:process"));
+var import_exec6 = __toESM(require_exec());
 
 // src/codeql/utils/codeql-env.ts
-var import_node_process = __toESM(require("node:process"), 1);
+var import_node_process = __toESM(require("node:process"));
 function getCodeQLEnvPath() {
   const codeqlEnv = import_node_process.default.env.CODEQL_CLI;
   if (codeqlEnv !== void 0 && codeqlEnv.length > 0 && FileUtils.exists(codeqlEnv)) {
@@ -52464,10 +52464,10 @@ function getCodeQLEnvPath() {
 }
 
 // src/codeql/utils/codeql-path.ts
-var import_exec4 = __toESM(require_exec(), 1);
+var import_exec4 = __toESM(require_exec());
 
 // src/utils/platform-utils.ts
-var process5 = __toESM(require("node:process"), 1);
+var process5 = __toESM(require("node:process"));
 function isWindowsPlatform() {
   return process5.platform === "win32";
 }
@@ -52505,7 +52505,7 @@ function findCodeQLBundleAsset(assets, platform4) {
 }
 
 // src/codeql/utils/find-codeql-common-paths.ts
-var process6 = __toESM(require("node:process"), 1);
+var process6 = __toESM(require("node:process"));
 function findCodeQLInCommonPaths() {
   const isWindows = process6.platform === "win32";
   const commonPaths = isWindows ? [
@@ -52530,7 +52530,7 @@ function findCodeQLInCommonPaths() {
 }
 
 // src/codeql/utils/github-release-utils.ts
-var import_exec5 = __toESM(require_exec(), 1);
+var import_exec5 = __toESM(require_exec());
 async function getLatestCodeQLRelease() {
   const tempFile = "codeql-release-info.json";
   try {
@@ -52555,7 +52555,7 @@ async function getLatestCodeQLRelease() {
 }
 
 // src/codeql/utils/platform-utils.ts
-var import_node_process2 = __toESM(require("node:process"), 1);
+var import_node_process2 = __toESM(require("node:process"));
 function getPlatformIdentifier() {
   switch (import_node_process2.default.platform) {
     case "darwin":
@@ -52686,7 +52686,7 @@ var CodeQLInstaller = class {
 };
 
 // src/config/get-inputs.ts
-var core2 = __toESM(require_core(), 1);
+var core2 = __toESM(require_core());
 function getInputs() {
   const inputs = {
     languages: core2.getInput("languages") || "javascript",
@@ -52741,7 +52741,7 @@ function filterValidQueryFilters(arr) {
 }
 
 // src/config/utils/safe-parse-yaml.ts
-var import_yaml = __toESM(require_dist(), 1);
+var import_yaml = __toESM(require_dist());
 function safeParseYaml(content) {
   try {
     const result = (0, import_yaml.parse)(content);
@@ -52847,11 +52847,11 @@ async function loadConfig(inputs) {
 }
 
 // src/file-filtering/filter.ts
-var process9 = __toESM(require("node:process"), 1);
-var glob = __toESM(require_glob(), 1);
+var process9 = __toESM(require("node:process"));
+var glob = __toESM(require_glob());
 
 // src/utils/pattern-matcher.ts
-var path3 = __toESM(require("node:path"), 1);
+var path3 = __toESM(require("node:path"));
 
 // node_modules/minimatch/dist/esm/index.js
 var import_brace_expansion = __toESM(require_brace_expansion2(), 1);
@@ -54299,9 +54299,9 @@ var FileFilter = class {
 };
 
 // src/github/issue-creator.ts
-var crypto = __toESM(require("node:crypto"), 1);
-var import_github = __toESM(require_github(), 1);
-var github = __toESM(require_github(), 1);
+var crypto = __toESM(require("node:crypto"));
+var import_github = __toESM(require_github());
+var github = __toESM(require_github());
 var IssueCreator = class {
   static async createIssuesFromSarif(sarif, token) {
     const FINGERPRINT_LENGTH = 8;
