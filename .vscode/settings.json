@@ -2,7 +2,7 @@
   "fileGenerator.configs": [
     {
       "tasks": [
-        //! Test current file (node)
+        // ! Test current file (node)
         {
           "terminalInstanceType": "label",
           "runTaskOnFileCreation": false,

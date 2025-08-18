@@ -1,17 +1,19 @@
 {
-  "name": "github-action-template",
-  "description": "GitHub Actions TypeScript Template",
-  "version": "0.0.0",
-  "author": "",
+  "name": "codeql-scanner",
   "type": "module",
+  "version": "0.1.0",
   "private": true,
-  "homepage": "https://github.com/pixpilot/github-action-template#readme",
+  "packageManager": "pnpm@10.14.0",
+  "description": "GitHub Actions TypeScript Template",
+  "author": "",
+  "license": "MIT",
+  "homepage": "https://github.com/pixpilot/codeql-scanner#readme",
   "repository": {
     "type": "git",
-    "url": "git+https://github.com/pixpilot/github-action-template.git"
+    "url": "git+https://github.com/pixpilot/codeql-scanner.git"
   },
   "bugs": {
-    "url": "https://github.com/pixpilot/github-action-template/issues"
+    "url": "https://github.com/pixpilot/codeql-scanner/issues"
   },
   "keywords": [
     "actions",
@@ -24,55 +26,57 @@
     "node": ">=20"
   },
   "scripts": {
-    "preinstall": "npx only-allow npm",
-    "bundle": "npm run format:write && npm run package",
-    "ci-test": "cross-env NODE_OPTIONS=--experimental-vm-modules NODE_NO_WARNINGS=1 npx jest",
+    "bundle": "pnpm run format:write && pnpm run package",
+    "ci-test": "cross-env NODE_OPTIONS=--experimental-vm-modules NODE_NO_WARNINGS=1 npx vitest --run",
     "coverage": "npx make-coverage-badge --output-path ./badges/coverage.svg",
-    "format:write": "npx prettier --write .",
-    "format:check": "npx prettier --check .",
+    "format": "npx prettier --check .",
+    "format:fix": "npx prettier --write .",
     "lint": "npx eslint .",
     "lint:fix": "npx eslint . --fix",
+    "test": "vitest --run",
+    "test:watch": "vitest --watch",
+    "test:coverage": "vitest --coverage",
     "typecheck": "tsc --noEmit",
     "tsc:watch": "tsc --noEmit --watch",
     "local-action": "npx @github/local-action . src/index.ts .env",
     "package": "npx rollup --config rollup.config.js",
-    "package:watch": "npm run package -- --watch",
-    "test": "cross-env NODE_OPTIONS=--experimental-vm-modules NODE_NO_WARNINGS=1 npx jest",
-    "all": "npm run format:write && npm run lint && npm run typecheck && npm run test && npm run coverage && npm run package",
-    "build": "rollup -c"
+    "package:watch": "pnpm run package -- --watch",
+    "fix:all": "pnpm format:fix && pnpm lint:fix && pnpm typecheck",
+    "build": "rollup -c",
+    "deps:update": "npx taze -r -w && pnpm install",
+    "deps:update:major": "npx taze major -r -w && pnpm install"
   },
-  "license": "MIT",
   "dependencies": {
     "@actions/core": "^1.11.1"
   },
-  "devDependencies": {
-    "@eslint/compat": "^1.3.0",
-    "@github/local-action": "^3.2.1",
-    "@jest/globals": "^29.7.0",
-    "@pixpilot/dev-config": "^1.0.21",
-    "@rollup/plugin-commonjs": "^28.0.3",
-    "@rollup/plugin-node-resolve": "^16.0.1",
-    "@rollup/plugin-typescript": "^12.1.3",
-    "@types/jest": "^30.0.0",
-    "@types/node": "^24.0.4",
-    "@typescript-eslint/eslint-plugin": "^8.35.0",
-    "@typescript-eslint/parser": "^8.35.0",
-    "cross-env": "^7.0.3",
-    "eslint": "^9.28.0",
-    "eslint-config-prettier": "^10.1.5",
-    "eslint-plugin-import": "^2.31.0",
-    "eslint-plugin-jest": "^28.13.5",
-    "eslint-plugin-prettier": "^5.4.1",
-    "jest": "^30.0.0",
-    "make-coverage-badge": "^1.2.0",
-    "prettier": "^3.5.3",
-    "prettier-eslint": "^16.4.2",
-    "rollup": "^4.43.0",
-    "ts-jest": "^29.4.0",
-    "tsx": "^4.20.3",
-    "typescript": "^5.8.3"
-  },
   "optionalDependencies": {
     "@rollup/rollup-linux-x64-gnu": "*"
+  },
+  "devDependencies": {
+    "@actions/glob": "^0.5.0",
+    "@eslint/compat": "^1.3.2",
+    "@github/local-action": "^5.1.0",
+    "@pixpilot/dev-config": "^3.1.0",
+    "@pixpilot/eslint-config": "^2.6.1",
+    "@rollup/plugin-commonjs": "^28.0.6",
+    "@rollup/plugin-node-resolve": "^16.0.1",
+    "@rollup/plugin-typescript": "^12.1.4",
+    "@types/node": "^24.3.0",
+    "@typescript-eslint/eslint-plugin": "^8.39.1",
+    "@typescript-eslint/parser": "^8.39.1",
+    "@vitest/coverage-v8": "^3.2.4",
+    "@vitest/ui": "^3.2.4",
+    "cross-env": "^10.0.0",
+    "eslint": "^9.33.0",
+    "eslint-config-prettier": "^10.1.8",
+    "eslint-plugin-import": "^2.32.0",
+    "eslint-plugin-prettier": "^5.5.4",
+    "make-coverage-badge": "^1.2.0",
+    "prettier": "^3.6.2",
+    "prettier-eslint": "^16.4.2",
+    "rollup": "^4.46.3",
+    "tsx": "^4.20.4",
+    "typescript": "^5.9.2",
+    "vitest": "^3.2.4"
   }
 }

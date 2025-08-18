@@ -2,9 +2,9 @@
 
 ## Testing
 
-This project uses jest for testing.
+This project uses vitest for testing.
 
-- **Mocking:** Always use 'jest-mock' mocking when mocking in tests.
+- **Mocking:** Always use 'vi.mocked' mocking when mocking in tests.
 
 # File Naming Conventions
 
