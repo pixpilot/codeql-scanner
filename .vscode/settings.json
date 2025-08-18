@@ -1,0 +1,44 @@
+{
+  "fileGenerator.configs": [
+    {
+      "tasks": [
+        //! Test current file (node)
+        {
+          "terminalInstanceType": "label",
+          "runTaskOnFileCreation": false,
+          "label": "Test current file (node)",
+          "command": "npm test",
+          "args": ["${relativeTargetFile}"]
+        },
+        {
+          "runTaskOnFileCreation": true,
+          "label": "Watch current file (node)",
+          "command": "npm test",
+          "userInputPrompt": [
+            [
+              {
+                "label": "--coverage"
+              }
+            ]
+          ],
+          "args": ["--watch", "${relativeTargetFile}"]
+        },
+        {
+          "terminalInstanceType": "label",
+          "runTaskOnFileCreation": false,
+          "label": "Test directory (node)",
+          "command": "npm test",
+          "shouldSwitchToFile": false,
+          "args": ["${relativeFileDirname}"]
+        }
+      ],
+      "label": "Tests",
+      "fileSuffixType": "extend extension",
+      "filesSuffix": "test",
+      "directoryName": "tests",
+      "supportedExtension": ["ts", "tsx", "js", "jsx"],
+      "defaultLocationForFiles": "project root",
+      "description": "Tests Creator"
+    }
+  ]
+}

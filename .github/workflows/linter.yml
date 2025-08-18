@@ -1,0 +1,77 @@
+# This workflow will lint the entire codebase using the
+# `super-linter/super-linter` action.
+#
+# For more information, see the super-linter repository:
+#     https://github.com/super-linter/super-linter
+name: Lint Codebase
+
+on:
+  pull_request:
+    branches:
+      - main
+  push:
+    branches:
+      - main
+
+permissions:
+  contents: read
+  packages: read
+  statuses: write
+
+jobs:
+  lint:
+    name: Lint Codebase
+    runs-on: ubuntu-latest
+
+    steps:
+      # Checkout the repository.
+      - name: Checkout
+        id: checkout
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      # Setup Node.js using the version specified in `.node-version`.
+      - name: Setup Node.js
+        id: setup-node
+        uses: actions/setup-node@v4
+        with:
+          node-version-file: .node-version
+          cache: npm
+
+      # Install dependencies using `npm ci`.
+      - name: Install Dependencies
+        id: install
+        run: npm ci
+
+      # Run project linting (includes TypeScript via ESLint)
+      - name: Lint TypeScript and JavaScript
+        id: lint-ts-js
+        run: npm run lint
+
+      # Run TypeScript type checking
+      - name: TypeScript Type Check
+        id: typecheck
+        run: npm run typecheck
+
+      # Run Prettier formatting check
+      - name: Check Formatting
+        id: format-check
+        run: npm run format:check
+
+      # Lint other files using Super Linter
+      - name: Lint Other Files
+        id: super-linter
+        uses: super-linter/super-linter/slim@v7
+        env:
+          DEFAULT_BRANCH: main
+          FILTER_REGEX_EXCLUDE: (dist/**/*|package-lock\.json|node_modules/**|\.devcontainer/**|\.vscode/**)
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          LINTER_RULES_PATH: .automation
+          VALIDATE_ALL_CODEBASE: false
+          # Only validate specific file types we want Super Linter to handle
+          VALIDATE_MARKDOWN: true
+          VALIDATE_YAML: true
+          VALIDATE_DOCKERFILE_HADOLINT: true
+          VALIDATE_GITHUB_ACTIONS: true
+          VALIDATE_JSON: true
