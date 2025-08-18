@@ -26,7 +26,8 @@
     "node": ">=20"
   },
   "scripts": {
-    "bundle": "pnpm run format:write && pnpm run package",
+    "bundle": "pnpm run format:write && pnpm run build",
+    "build": "node esbuild.config.cjs",
     "ci-test": "cross-env NODE_OPTIONS=--experimental-vm-modules NODE_NO_WARNINGS=1 npx vitest --run",
     "coverage": "npx make-coverage-badge --output-path ./badges/coverage.svg",
     "format": "npx prettier --check .",
@@ -39,10 +40,7 @@
     "typecheck": "tsc --noEmit",
     "tsc:watch": "tsc --noEmit --watch",
     "local-action": "npx @github/local-action . src/index.ts .env",
-    "package": "npx rollup --config rollup.config.js",
-    "package:watch": "pnpm run package -- --watch",
     "fix:all": "pnpm format:fix && pnpm lint:fix && pnpm typecheck",
-    "build": "rollup -c",
     "deps:update": "npx taze -r -w && pnpm install",
     "deps:update:major": "npx taze major -r -w && pnpm install"
   },
@@ -57,10 +55,7 @@
     "@eslint/compat": "^1.3.2",
     "@github/local-action": "^5.1.0",
     "@pixpilot/dev-config": "^3.1.0",
-    "@pixpilot/eslint-config": "^2.6.1",
-    "@rollup/plugin-commonjs": "^28.0.6",
-    "@rollup/plugin-node-resolve": "^16.0.1",
-    "@rollup/plugin-typescript": "^12.1.4",
+    "@pixpilot/eslint-config": "^2.7.0",
     "@types/node": "^24.3.0",
     "@typescript-eslint/eslint-plugin": "^8.39.1",
     "@typescript-eslint/parser": "^8.39.1",
@@ -74,7 +69,6 @@
     "make-coverage-badge": "^1.2.0",
     "prettier": "^3.6.2",
     "prettier-eslint": "^16.4.2",
-    "rollup": "^4.46.3",
     "tsx": "^4.20.4",
     "typescript": "^5.9.2",
     "vitest": "^3.2.4"

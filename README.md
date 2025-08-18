@@ -75,8 +75,8 @@ jobs:
 
 To modify this action:
 
-1. Edit `index.js`
-2. Run `npm run build` to create the bundled `dist/index.js`
+1. Edit `src/index.ts`
+2. Run `npm run build` to create the bundled `dist/index.js` using esbuild
 3. Commit both the source and dist files
 
 ## 🏗️ Building
