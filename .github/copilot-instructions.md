@@ -14,4 +14,4 @@ This project uses vitest for testing.
   - Example: `my-module.ts`, `helper-functions.js`, `data-handler.js`
 
 - **Config files:** Use kebab-case unless the framework or library has a different standard—follow the convention for that tool.
-  - Example: `tsconfig.json`, `rollup.config.js`
+  - Example: `tsconfig.json`
