@@ -8,7 +8,7 @@ esbuild
     platform: 'node',
     target: 'node20',
     outdir: 'dist',
-    format: 'cjs',
+    format: 'esm',
     sourcemap: false,
     tsconfig: 'tsconfig.build.json',
     logLevel: 'info',
