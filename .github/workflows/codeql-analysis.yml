@@ -25,9 +25,6 @@ on:
     #        *  * * * *
     - cron: '30 1 * * 0' # Every Sunday at 01:30 UTC
 
-# -------------------------------------------------------------
-# Alternative: pixpilot/codeql-scanner@main
-# -------------------------------------------------------------
 jobs:
   analyze:
     runs-on: ubuntu-latest
