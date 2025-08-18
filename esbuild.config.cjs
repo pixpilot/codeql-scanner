@@ -8,7 +8,8 @@ esbuild
     platform: 'node',
     target: 'node20',
     outdir: 'dist',
-    format: 'esm',
+    format: 'cjs', // Changed from 'esm' to 'cjs'
+    external: ['string_decoder', 'fs', 'path', 'os', 'util', 'stream'], // Mark Node built-ins as external
     sourcemap: false,
     tsconfig: 'tsconfig.build.json',
     logLevel: 'info',
