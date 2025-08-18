@@ -1,26 +1,33 @@
-# 💡 Perform CodeQL Analysis
+# �️ CodeQL Scanner Action
 
-A github action that runs CodeQL analysis on your repository and automatically creates GitHub issues for each security finding.
+A comprehensive GitHub Action that performs CodeQL security analysis on your repository and automatically creates GitHub issues for each security finding with intelligent deduplication.
 
 > ⚠️ **Security Notice**
 >
 > For most repositories, you should strongly consider using GitHub's official code security tools (such as CodeQL and Dependabot), which are free for public repositories. [Learn more](https://github.com/features/security).
 
-## 🚀 Workflow Overview
+## 🚀 How It Works
 
-- Runs CodeQL analysis on a repository
-- Scans for security and quality issues
-- Automatically creates a GitHub issue for each new finding
-- Attaches the specific SARIF finding data to each issue
-- Is reusable and can be called from other workflows
+1. **🔧 Setup**: Automatically installs and configures CodeQL CLI
+2. **📂 File Filtering**: Applies configurable include/exclude patterns to source files
+3. **🗄️ Database Creation**: Builds CodeQL analysis database from filtered code
+4. **🔍 Analysis**: Runs CodeQL security and quality queries
+5. **📋 Issue Creation**: Creates individual GitHub issues for each finding
+6. **🔄 Deduplication**: Prevents duplicate issues using intelligent fingerprinting
+7. **🏷️ Organization**: Labels all issues with `codeql-finding` for easy management
 
 ## 🧰 Features
 
-- 🔍 **File Filtering**: Include/exclude files using glob patterns
-- 🛡️ **CodeQL Analysis**: Runs CodeQL security analysis
-- 📋 **Issue Creation**: Creates a GitHub issue for each finding
-- 🔄 **Deduplication**: Prevents duplicate issues using fingerprinting
-- 🏷️ **Smart Labeling**: Labels issues with `codeql-finding`
+- 🎯 **Multi-Language Support**: JavaScript, TypeScript, Python, Java, C#, C++, Go
+- � **Auto-Installation**: Downloads and configures CodeQL CLI automatically if needed
+- 📂 **Smart File Filtering**: Include/exclude files using powerful glob patterns
+- ⚙️ **Configurable Analysis**: Support for CodeQL configuration files and QLS profiles
+- 🛡️ **Comprehensive Scanning**: Runs security and quality analysis queries
+- 📋 **Automated Issues**: Creates detailed GitHub issues for each finding
+- 🔄 **Intelligent Deduplication**: Prevents duplicate issues using content fingerprinting
+- 🏷️ **Smart Organization**: Auto-labels issues with `codeql-finding` tag
+- 📊 **SARIF Integration**: Full SARIF format support for detailed result reporting
+- 🔒 **Enterprise Ready**: Works with GitHub Enterprise and custom CodeQL configurations
 
 ## 📝 Usage
 
@@ -49,19 +56,47 @@ jobs:
         uses: actions/checkout@v4
 
       - name: Run CodeQL Analysis and Create Issues
-        uses: pixpilot/github/actions/codeql-scanner@main
+        uses: pixpilot/codeql-scanner@main
         with:
           token: ${{ secrets.GITHUB_TOKEN }}
           languages: javascript
-          config-file: .github/codeql/codeql-configuration.yml
+          config-file: .github/codeql/codeql-config.yml
           debug: true
 ```
+
+## 🔧 Configuration
+
+### Basic Configuration
+
+The action accepts configuration through input parameters or a configuration file.
+
+**Example configuration file** (.github/codeql/codeql-config.yml):
+
+- Configure query filters to exclude notes and include security tags
+- Specify paths to include and exclude from analysis
+- Define custom query sets for analysis
+
+### Advanced Usage with Matrix Strategy
+
+For multi-language repositories, use a matrix strategy in your workflow file to analyze multiple languages.
+
+### Supported Languages
+
+| Language   | CodeQL Identifier |
+| ---------- | ----------------- |
+| JavaScript | javascript        |
+| TypeScript | javascript        |
+| Python     | python            |
+| Java       | java              |
+| C#         | csharp            |
+| C/C++      | cpp               |
+| Go         | go                |
 
 ## ⚙️ Inputs
 
 | Input         | Description                               | Required | Default                |
 | ------------- | ----------------------------------------- | -------- | ---------------------- |
-| `languages`   | Comma-separated list of languages to scan | No       | javascript,python      |
+| `languages`   | Comma-separated list of languages to scan | No       | `javascript`           |
 | `source-root` | Path of the root source code directory    | No       | -                      |
 | `ram`         | Memory in MB for CodeQL extractors        | No       | -                      |
 | `threads`     | Number of threads for CodeQL extractors   | No       | -                      |

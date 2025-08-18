@@ -3,8 +3,8 @@
   "version": "0.1.0",
   "private": true,
   "packageManager": "pnpm@10.14.0",
-  "description": "GitHub Actions TypeScript Template",
-  "author": "",
+  "description": "GitHub Action for CodeQL analysis with automatic issue creation",
+  "author": "pixpilot <m.doaie@hotmail.com>",
   "license": "MIT",
   "homepage": "https://github.com/pixpilot/codeql-scanner#readme",
   "repository": {
@@ -16,6 +16,11 @@
   },
   "keywords": [
     "actions",
+    "codeql",
+    "security",
+    "static-analysis",
+    "code-scanning",
+    "sarif",
     "typescript"
   ],
   "exports": {

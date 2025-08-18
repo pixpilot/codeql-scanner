@@ -57,7 +57,7 @@
 #         uses: actions/checkout@v4
 
 #       - name: Run CodeQL Analysis and Create Issues
-#         uses: pixpilot/github/actions/codeql-analyzer@main
+#         uses: pixpilot/codeql-scanner@main
 #         with:
 #           token: ${{ secrets.GITHUB_TOKEN }}
 #           languages: javascript # Comma-separated list of languages e.g., javascript,python
@@ -65,8 +65,8 @@
 #           debug: true
 # -------------------------------------------------------------------------------------
 
-name: CodeQL Issue Maker
-description: 'Runs CodeQL analysis, filters files, and creates GitHub issues for findings.'
+name: CodeQL Scanner
+description: 'Runs CodeQL analysis, filters files, and creates GitHub issues for security findings.'
 
 inputs:
   languages:
