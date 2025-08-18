@@ -113,7 +113,7 @@ describe('codeQLAnalyzer', () => {
     expect(FileUtils.writeFile).toHaveBeenCalled();
     const writeCall = vi
       .mocked(FileUtils.writeFile)
-      // eslint-disable-next-line antfu/consistent-chaining
+
       .mock.calls.find((call) => call[1].includes('keep-this'));
     expect(writeCall).toBeTruthy();
     if (writeCall) {
