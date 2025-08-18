@@ -26,7 +26,7 @@ on:
     - cron: '30 1 * * 0' # Every Sunday at 01:30 UTC
 
 # -------------------------------------------------------------
-# Alternative: Reusable workflow for code scanning
+# Alternative: pixpilot/codeql-scanner@main
 # -------------------------------------------------------------
 jobs:
   analyze:
@@ -35,7 +35,7 @@ jobs:
       - name: Checkout repository
         uses: actions/checkout@v4
 
-      - name: Perform CodeQL Analysis
+      - name: Run CodeQL Scanner
         uses: pixpilot/codeql-scanner@main
         with:
           token: ${{ secrets.GITHUB_TOKEN }}

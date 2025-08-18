@@ -56,7 +56,7 @@
 #         uses: actions/checkout@v4
 #
 #       - name: Initialize CodeQL
-#         uses: pixpilot/github/actions/codeql-analyzer@main
+#         uses: pixpilot/codeql-scanner@main
 #         with:
 #           token: ${{ secrets.GITHUB_TOKEN }}
 #           # language: 'javascript'
