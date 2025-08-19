@@ -24,8 +24,13 @@ runs:
   steps:
     - name: Install pnpm
       uses: pnpm/action-setup@v4
+      if: ${{ inputs.pnpm-version != '' }}
       with:
-        version: ${{ inputs.pnpm-version || 'latest' }}
+        version: ${{ inputs.pnpm-version }}
+
+    - name: Install pnpm (without version)
+      uses: pnpm/action-setup@v4
+      if: ${{ inputs.pnpm-version == '' }}
 
     - name: Setup Node.js
       uses: actions/setup-node@v4
