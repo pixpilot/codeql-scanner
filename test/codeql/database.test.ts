@@ -2,6 +2,7 @@ import { exec } from '@actions/exec';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 
 import { CodeQLDatabase } from '../../src/codeql/database';
+import * as PackageJsonUtils from '../../src/codeql/utils/package-json-utils';
 import { FileUtils } from '../../src/utils/file-utils';
 import { Logger } from '../../src/utils/logger';
 
@@ -11,16 +12,23 @@ vi.mock('../../src/utils/logger');
 vi.mock('node:process', () => ({
   cwd: vi.fn(() => '/test/workspace'),
 }));
+// Mock the new helper utilities to avoid touching fs in database tests
+vi.mock('../../src/codeql/utils/package-json-utils');
 
 const mockExec = vi.mocked(exec);
 const mockFileUtils = vi.mocked(FileUtils);
 const mockLogger = vi.mocked(Logger);
+const mockPackageUtils = vi.mocked(PackageJsonUtils);
 
 describe('codeQLDatabase', () => {
   beforeEach(() => {
     vi.clearAllMocks();
 
     mockFileUtils.joinPath.mockImplementation((...paths) => paths.join('/'));
+
+    // Default the package-json helper mocks to no-op (no renames)
+    mockPackageUtils.temporarilyRenamePackageJsonIfTypeModule?.mockReturnValue(false);
+    mockPackageUtils.restorePackageJson?.mockImplementation(() => undefined);
   });
 
   describe('createDatabase', () => {

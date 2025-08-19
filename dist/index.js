@@ -33250,9 +33250,54 @@ var Logger = class {
 };
 
 // src/codeql/database.ts
-var fs2 = __toESM(require("node:fs"));
 var process2 = __toESM(require("node:process"));
 var import_exec = __toESM(require_exec());
+
+// src/codeql/utils/package-json-utils.ts
+var fs2 = __toESM(require("node:fs"));
+function temporarilyRenamePackageJsonIfTypeModule(packageJsonPath, backupPath, description = "path") {
+  Logger.info(`Looking for package.json in ${description}: ${packageJsonPath}`);
+  if (!FileUtils.exists(packageJsonPath)) {
+    Logger.info(`No package.json found in ${description}.`);
+    return false;
+  }
+  Logger.info("package.json found. Reading file content.");
+  const packageJsonContent = FileUtils.readFile(packageJsonPath);
+  try {
+    const parsed = JSON.parse(packageJsonContent);
+    if (typeof parsed === "object" && parsed !== null && "type" in parsed) {
+      const packageJson = parsed;
+      Logger.info(`Detected package.json.type = ${String(packageJson.type)}`);
+      if (packageJson.type === "module") {
+        Logger.info(
+          `\u26A0\uFE0F Temporarily changing package.json type in ${description} to avoid ESM/CJS conflict with CodeQL extractor (typescript-parser-wrapper).`
+        );
+        fs2.renameSync(packageJsonPath, backupPath);
+        Logger.info("package.json was renamed to package.json.bak");
+        return true;
+      }
+      return false;
+    }
+    return false;
+  } catch (e) {
+    Logger.warning(
+      `Could not parse package.json in ${description}. Skipping temporary rename. Error: ${e instanceof Error ? e.message : String(e)}`
+    );
+    return false;
+  }
+}
+function restorePackageJson(backupPath, packageJsonPath, description = "path") {
+  if (!FileUtils.exists(backupPath)) {
+    Logger.warning(
+      `Backup package.json not found for ${description}: ${backupPath}. Skipping restore.`
+    );
+    return;
+  }
+  Logger.info(`Restoring original package.json for ${description}.`);
+  fs2.renameSync(backupPath, packageJsonPath);
+}
+
+// src/codeql/database.ts
 var CodeQLDatabase = class {
   static async createDatabase(codeqlPath, filteredPath, language, config) {
     Logger.info("Creating CodeQL database from filtered files...");
@@ -33272,70 +33317,16 @@ var CodeQLDatabase = class {
     let needsCleanup = false;
     let needsRootCleanup = false;
     try {
-      Logger.info(`Looking for package.json in filtered path: ${packageJsonPath}`);
-      if (FileUtils.exists(packageJsonPath)) {
-        Logger.info("package.json found. Reading file content.");
-        const packageJsonContent = FileUtils.readFile(packageJsonPath);
-        try {
-          const parsed = JSON.parse(packageJsonContent);
-          if (typeof parsed === "object" && parsed !== null && "type" in parsed) {
-            const packageJson = parsed;
-            Logger.info(`Detected package.json.type = ${String(packageJson.type)}`);
-            if (packageJson.type === "module") {
-              Logger.info(
-                "Temporarily renaming package.json to avoid ESM/CJS conflict with CodeQL extractor."
-              );
-              fs2.renameSync(packageJsonPath, packageJsonBackupPath);
-              needsCleanup = true;
-              Logger.info("package.json was renamed to package.json.bak");
-            } else {
-              Logger.info('package.json.type is not "module". No rename necessary.');
-            }
-          } else {
-            Logger.info(
-              'package.json does not contain a "type" field. No rename necessary.'
-            );
-          }
-        } catch (e) {
-          Logger.warning(
-            `Could not parse package.json. Skipping temporary rename. Error: ${e instanceof Error ? e.message : String(e)}`
-          );
-        }
-      } else {
-        Logger.info("No package.json found in filtered path.");
-      }
-      Logger.info(`Looking for package.json in root path: ${rootPackageJsonPath}`);
-      if (FileUtils.exists(rootPackageJsonPath)) {
-        Logger.info("Root package.json found. Reading file content.");
-        const rootPackageJsonContent = FileUtils.readFile(rootPackageJsonPath);
-        try {
-          const parsed = JSON.parse(rootPackageJsonContent);
-          if (typeof parsed === "object" && parsed !== null && "type" in parsed) {
-            const packageJson = parsed;
-            Logger.info(`Detected root package.json.type = ${String(packageJson.type)}`);
-            if (packageJson.type === "module") {
-              Logger.info(
-                "Temporarily renaming root package.json to avoid ESM/CJS conflict with CodeQL extractor."
-              );
-              fs2.renameSync(rootPackageJsonPath, rootPackageJsonBackupPath);
-              needsRootCleanup = true;
-              Logger.info("Root package.json was renamed to package.json.bak");
-            } else {
-              Logger.info('Root package.json.type is not "module". No rename necessary.');
-            }
-          } else {
-            Logger.info(
-              'Root package.json does not contain a "type" field. No rename necessary.'
-            );
-          }
-        } catch (e) {
-          Logger.warning(
-            `Could not parse root package.json. Skipping temporary rename. Error: ${e instanceof Error ? e.message : String(e)}`
-          );
-        }
-      } else {
-        Logger.info("No package.json found in root path.");
-      }
+      needsCleanup = temporarilyRenamePackageJsonIfTypeModule(
+        packageJsonPath,
+        packageJsonBackupPath,
+        "filtered path"
+      );
+      needsRootCleanup = temporarilyRenamePackageJsonIfTypeModule(
+        rootPackageJsonPath,
+        rootPackageJsonBackupPath,
+        "root path"
+      );
       const args = ["database", "create", dbPath];
       if (isMultiLanguage) {
         args.push("--db-cluster");
@@ -33346,15 +33337,20 @@ var CodeQLDatabase = class {
         args.push(`--language=${languages[0]}`);
       }
       args.push(`--source-root=${filteredPath}`);
-      await (0, import_exec.exec)(codeqlPath, args);
+      try {
+        await (0, import_exec.exec)(codeqlPath, args);
+      } catch (e) {
+        Logger.error(
+          `CodeQL execution failed: ${e instanceof Error ? e.message : String(e)}`
+        );
+        throw e;
+      }
     } finally {
       if (needsCleanup) {
-        Logger.info("Restoring original package.json.");
-        fs2.renameSync(packageJsonBackupPath, packageJsonPath);
+        restorePackageJson(packageJsonBackupPath, packageJsonPath, "filtered path");
       }
       if (needsRootCleanup) {
-        Logger.info("Restoring original root package.json.");
-        fs2.renameSync(rootPackageJsonBackupPath, rootPackageJsonPath);
+        restorePackageJson(rootPackageJsonBackupPath, rootPackageJsonPath, "root path");
       }
     }
   }
