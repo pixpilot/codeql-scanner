@@ -13,7 +13,7 @@ permissions:
 
 jobs:
   check-dist:
-    name: Check actions/codeql-analyzer /dist/index.js
+    name: Check dist/index.js
     runs-on: ubuntu-latest
     steps:
       - name: Checkout
@@ -21,6 +21,8 @@ jobs:
 
       - name: Setup project
         uses: ./.github/actions/setup-project
+        with:
+          build: 'true'
 
       - name: Check if dist/index.js exists
         run: |

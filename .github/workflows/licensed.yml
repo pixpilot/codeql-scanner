@@ -31,8 +31,6 @@ jobs:
 
       - name: Setup project
         uses: ./.github/actions/setup-project
-        with:
-          build: false
 
       - name: Setup Ruby
         id: setup-ruby
