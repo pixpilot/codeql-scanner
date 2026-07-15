@@ -54,6 +54,12 @@ export interface IssueData {
   labels: string[];
 }
 
+/** Resource limits forwarded to the CodeQL CLI. Omitted values let CodeQL decide. */
+export interface ResourceOptions {
+  ram?: string | undefined;
+  threads?: string | undefined;
+}
+
 export interface QueryPack {
   language: string;
   profile: string;

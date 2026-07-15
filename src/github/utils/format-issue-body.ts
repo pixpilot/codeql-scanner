@@ -47,7 +47,7 @@ function buildLocationsList(locations: CodeQLResult['locations']): string {
  */
 function buildDetails(result: CodeQLResult, budget: number): string {
   if (budget < MIN_JSON_BUDGET) {
-    return "_SARIF finding details omitted: the finding is too large to include within GitHub's issue size limit. See the SARIF artifact or the Security tab for the full data._";
+    return "_SARIF finding details omitted: the finding is too large to include within GitHub's issue size limit. Re-run the analysis to inspect the full result._";
   }
 
   const full = JSON.stringify(result, null, JSON_INDENT);
@@ -78,14 +78,14 @@ function buildDetails(result: CodeQLResult, budget: number): string {
   }
 
   if (dropped.length > 0) {
-    const note = `> ⚠️ Trimmed to fit GitHub's issue size limit. Omitted: ${dropped.join(', ')}. The full data is in the SARIF artifact.`;
+    const note = `> ⚠️ Trimmed to fit GitHub's issue size limit. Omitted: ${dropped.join(', ')}. The rule and locations above identify the finding.`;
     const trimmed = JSON.stringify(summarised, null, JSON_INDENT);
     const rendered = details(trimmed, note);
     if (rendered.length <= budget) return rendered;
   }
 
   // Still too large: cut the JSON itself, leaving room for the fence and note.
-  const note = `> ⚠️ Truncated to fit GitHub's issue size limit. The full data is in the SARIF artifact.`;
+  const note = `> ⚠️ Truncated to fit GitHub's issue size limit.`;
   const overhead = details('', note).length;
   const jsonBudget = Math.max(budget - overhead, 0);
 

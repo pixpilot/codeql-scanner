@@ -1,4 +1,4 @@
-import type { CodeQLConfig, QueryFilter, SarifReport } from '../types';
+import type { CodeQLConfig, QueryFilter, ResourceOptions, SarifReport } from '../types';
 
 import * as fs from 'node:fs';
 import * as process from 'node:process';
@@ -9,6 +9,10 @@ import { FileUtils } from '../utils/file-utils';
 import { Logger } from '../utils/logger';
 import { CodeQLDatabase } from './database';
 import { QueryPackManager } from './query-packs';
+import { buildResourceArgs } from './utils/resource-args';
+
+/** Used when the `ram` input is not set, preserving the previous hard-coded limit. */
+const DEFAULT_ANALYZE_RAM = '4000';
 
 export class CodeQLAnalyzer {
   static async analyzeWithCodeQL(
@@ -16,6 +20,7 @@ export class CodeQLAnalyzer {
     language: string,
     qlsProfile: string,
     config?: CodeQLConfig,
+    resources?: ResourceOptions,
   ): Promise<void> {
     Logger.info('Running CodeQL analysis...');
 
@@ -49,6 +54,7 @@ export class CodeQLAnalyzer {
             langDbPath,
             langOutputPath,
             config,
+            resources,
           );
           sarifFiles.push(langOutputPath);
         } else {
@@ -85,6 +91,7 @@ export class CodeQLAnalyzer {
         dbPath,
         outputPath,
         config,
+        resources,
       );
 
       // Apply query filters from config if specified for single language analysis
@@ -101,6 +108,7 @@ export class CodeQLAnalyzer {
     dbPath: string,
     outputPath: string,
     config?: CodeQLConfig,
+    resources?: ResourceOptions,
   ): Promise<void> {
     // Parse profiles from comma-separated string
     const profiles = QueryPackManager.parseProfiles(qlsProfile);
@@ -116,6 +124,14 @@ export class CodeQLAnalyzer {
     Logger.info(
       `Running analysis with ${queryPacks.length} query pack(s): ${queryPacks.join(', ')}`,
     );
+
+    // Fall back to the historic 4000MB limit when the `ram` input is not set, so that
+    // leaving the input blank keeps the previous behaviour.
+    const ram = resources?.ram?.trim();
+    const resourceArgs = buildResourceArgs({
+      ram: ram !== undefined && ram !== '' ? ram : DEFAULT_ANALYZE_RAM,
+      threads: resources?.threads,
+    });
 
     const packSarifFiles: string[] = [];
 
@@ -136,7 +152,7 @@ export class CodeQLAnalyzer {
           'database',
           'analyze',
           dbPath,
-          '--ram=4000',
+          ...resourceArgs,
           '--format=sarif-latest',
           `--output=${packOutputPath}`,
           '--threat-model=local,remote', // Include local threat model for comprehensive detection
@@ -161,7 +177,7 @@ export class CodeQLAnalyzer {
             'database',
             'analyze',
             dbPath,
-            '--ram=4000',
+            ...resourceArgs,
             '--format=sarif-latest',
             `--output=${packOutputPath}`,
             '--threat-model=local,remote', // Include local threat model for comprehensive detection

@@ -125,6 +125,42 @@ describe('codeQLAnalyzer', () => {
     }
   });
 
+  it('analyzeWithCodeQL forwards the ram and threads inputs to CodeQL', async () => {
+    vi.mocked(exec).mockResolvedValue(0);
+
+    await CodeQLAnalyzer.analyzeWithCodeQL(
+      '/codeql',
+      'python',
+      'security-extended',
+      undefined,
+      { ram: '8000', threads: '4' },
+    );
+
+    const args = vi.mocked(exec).mock.calls[0][1] as string[];
+    expect(args).toContain('--ram=8000');
+    expect(args).toContain('--threads=4');
+    expect(args).not.toContain('--ram=4000');
+  });
+
+  it('analyzeWithCodeQL keeps the default ram limit when the input is blank', async () => {
+    vi.mocked(exec).mockResolvedValue(0);
+
+    await CodeQLAnalyzer.analyzeWithCodeQL(
+      '/codeql',
+      'python',
+      'security-extended',
+      undefined,
+      {
+        ram: '',
+        threads: '',
+      },
+    );
+
+    const args = vi.mocked(exec).mock.calls[0][1] as string[];
+    expect(args).toContain('--ram=4000');
+    expect(args.some((arg) => arg.startsWith('--threads='))).toBe(false);
+  });
+
   it('analyzeWithCodeQL throws when every query pack and the fallback fail', async () => {
     vi.mocked(exec).mockRejectedValue(new Error('CodeQL exploded'));
 

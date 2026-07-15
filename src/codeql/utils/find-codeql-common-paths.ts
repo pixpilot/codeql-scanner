@@ -1,6 +1,36 @@
-import * as process from 'node:process';
+import process from 'node:process';
 import { FileUtils } from '../../utils/file-utils';
 import { Logger } from '../../utils/logger';
+
+/**
+ * Expands a single `*` segment by listing the directory that stands in its place and
+ * substituting each entry back into the pattern. `fs.existsSync` does not expand globs,
+ * so a pattern must be resolved to real paths before it is probed. Matches are ordered
+ * newest-first so the most recent CodeQL version in the tool cache wins.
+ *
+ * Substituting into the pattern keeps its own separators; `path.join` would rewrite them
+ * to the host's, which is wrong for any pattern not built for the host platform.
+ */
+function expandVersionGlob(pattern: string): string[] {
+  const starIndex = pattern.indexOf('*');
+  if (starIndex === -1) return [pattern];
+
+  const prefix = pattern.slice(0, starIndex);
+  const suffix = pattern.slice(starIndex + 1);
+  const baseDir = prefix.replace(/[\\/]$/u, '');
+
+  let entries: string[];
+  try {
+    entries = FileUtils.listDirectory(baseDir);
+  } catch {
+    // The tool cache directory does not exist on this runner.
+    return [];
+  }
+
+  return [...entries]
+    .sort((a, b) => b.localeCompare(a, undefined, { numeric: true }))
+    .map((entry) => `${prefix}${entry}${suffix}`);
+}
 
 /**
  * Searches for CodeQL in common locations used by GitHub Actions and local setups.
@@ -21,14 +51,16 @@ export function findCodeQLInCommonPaths(): string | null {
         './codeql/codeql',
       ];
 
-  for (const commonPath of commonPaths) {
-    try {
-      if (FileUtils.exists(commonPath)) {
-        Logger.info(`Found CodeQL at: ${commonPath}`);
-        return commonPath;
+  for (const pattern of commonPaths) {
+    for (const candidate of expandVersionGlob(pattern)) {
+      try {
+        if (FileUtils.exists(candidate)) {
+          Logger.info(`Found CodeQL at: ${candidate}`);
+          return candidate;
+        }
+      } catch {
+        // Continue searching
       }
-    } catch {
-      // Continue searching
     }
   }
   return null;

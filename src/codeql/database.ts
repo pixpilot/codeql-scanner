@@ -1,4 +1,4 @@
-import type { CodeQLConfig } from '../types';
+import type { CodeQLConfig, ResourceOptions } from '../types';
 import * as process from 'node:process';
 import { exec } from '@actions/exec';
 import { FileUtils } from '../utils/file-utils';
@@ -7,6 +7,7 @@ import {
   restorePackageJson,
   temporarilyRenamePackageJsonIfTypeModule,
 } from './utils/package-json-utils';
+import { buildResourceArgs } from './utils/resource-args';
 
 export class CodeQLDatabase {
   static async createDatabase(
@@ -14,6 +15,7 @@ export class CodeQLDatabase {
     filteredPath: string,
     language: string,
     config?: CodeQLConfig,
+    resources?: ResourceOptions,
   ): Promise<void> {
     Logger.info('Creating CodeQL database from filtered files...');
 
@@ -64,6 +66,8 @@ export class CodeQLDatabase {
       }
 
       args.push(`--source-root=${filteredPath}`);
+      // The ram/threads inputs describe extractor limits, which apply here.
+      args.push(...buildResourceArgs(resources));
       try {
         await exec(codeqlPath, args);
       } catch (e) {

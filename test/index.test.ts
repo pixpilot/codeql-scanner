@@ -78,10 +78,42 @@ describe('action', () => {
       'javascript',
       'security-and-quality',
       undefined,
+      { ram: '', threads: '' },
     );
     expect(mockSarifProcessor.processSarifFile).toHaveBeenCalled();
     expect(mockIssueCreator.createIssuesFromSarif).toHaveBeenCalled();
     expect(mockCore.setFailed).not.toHaveBeenCalled();
+  });
+
+  it('should forward the ram and threads inputs to the database and analysis steps', async () => {
+    getInputsSpy.mockImplementation(() => ({
+      languages: 'javascript',
+      sourceRoot: '',
+      ram: '8000',
+      threads: '4',
+      debug: false,
+      config: '',
+      configFile: '',
+      qlsProfile: 'security-and-quality',
+      token: 'test-token',
+    }));
+
+    await run();
+
+    expect(mockCodeQLDatabase.createDatabase).toHaveBeenCalledWith(
+      '/path/to/codeql',
+      '/path/to/filtered',
+      'javascript',
+      undefined,
+      { ram: '8000', threads: '4' },
+    );
+    expect(mockCodeQLAnalyzer.analyzeWithCodeQL).toHaveBeenCalledWith(
+      '/path/to/codeql',
+      'javascript',
+      'security-and-quality',
+      undefined,
+      { ram: '8000', threads: '4' },
+    );
   });
 
   it('should stay green when vulnerabilities are found and issues are created', async () => {
@@ -149,6 +181,7 @@ describe('action', () => {
       'javascript,python,java',
       'security-and-quality',
       undefined,
+      { ram: '', threads: '' },
     );
   });
 

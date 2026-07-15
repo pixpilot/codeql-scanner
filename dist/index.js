@@ -33204,6 +33204,10 @@ var FileUtils = class {
   static readFile(filePath) {
     return fs.readFileSync(filePath, "utf8");
   }
+  /** Names of the entries in `dirPath`. Throws if the directory does not exist. */
+  static listDirectory(dirPath) {
+    return fs.readdirSync(dirPath);
+  }
   static writeFile(filePath, content) {
     fs.writeFileSync(filePath, content, "utf8");
   }
@@ -33313,9 +33317,23 @@ function restorePackageJson(backupPath, packageJsonPath, description = "path") {
   fs2.renameSync(backupPath, packageJsonPath);
 }
 
+// src/codeql/utils/resource-args.ts
+function buildResourceArgs(resources) {
+  const args = [];
+  const ram = resources?.ram?.trim();
+  if (ram !== void 0 && ram !== "") {
+    args.push(`--ram=${ram}`);
+  }
+  const threads = resources?.threads?.trim();
+  if (threads !== void 0 && threads !== "") {
+    args.push(`--threads=${threads}`);
+  }
+  return args;
+}
+
 // src/codeql/database.ts
 var CodeQLDatabase = class {
-  static async createDatabase(codeqlPath, filteredPath, language, config) {
+  static async createDatabase(codeqlPath, filteredPath, language, config, resources) {
     Logger.info("Creating CodeQL database from filtered files...");
     const dbPath = FileUtils.joinPath(process2.cwd(), "codeql-db");
     const effectiveLanguage = config?.languages ?? language;
@@ -33353,6 +33371,7 @@ var CodeQLDatabase = class {
         args.push(`--language=${languages[0]}`);
       }
       args.push(`--source-root=${filteredPath}`);
+      args.push(...buildResourceArgs(resources));
       try {
         await (0, import_exec.exec)(codeqlPath, args);
       } catch (e) {
@@ -33495,8 +33514,9 @@ var QueryPackManager = class {
 };
 
 // src/codeql/analyzer.ts
+var DEFAULT_ANALYZE_RAM = "4000";
 var CodeQLAnalyzer = class {
-  static async analyzeWithCodeQL(codeqlPath, language, qlsProfile, config) {
+  static async analyzeWithCodeQL(codeqlPath, language, qlsProfile, config, resources) {
     Logger.info("Running CodeQL analysis...");
     const dbPath = CodeQLDatabase.getDatabasePath();
     const outputPath = FileUtils.joinPath(process3.cwd(), "results.sarif");
@@ -33517,7 +33537,8 @@ var CodeQLAnalyzer = class {
             qlsProfile,
             langDbPath,
             langOutputPath,
-            config
+            config,
+            resources
           );
           sarifFiles.push(langOutputPath);
         } else {
@@ -33545,14 +33566,15 @@ var CodeQLAnalyzer = class {
         qlsProfile,
         dbPath,
         outputPath,
-        config
+        config,
+        resources
       );
       if (config?.["query-filters"] && config["query-filters"].length > 0) {
         await this.applyQueryFilters(outputPath, config["query-filters"]);
       }
     }
   }
-  static async analyzeSingleLanguage(codeqlPath, language, qlsProfile, dbPath, outputPath, config) {
+  static async analyzeSingleLanguage(codeqlPath, language, qlsProfile, dbPath, outputPath, config, resources) {
     const profiles = QueryPackManager.parseProfiles(qlsProfile);
     const queryPacks = QueryPackManager.getQueryPacks(language, profiles, config);
     if (queryPacks.length === 0) {
@@ -33561,6 +33583,11 @@ var CodeQLAnalyzer = class {
     Logger.info(
       `Running analysis with ${queryPacks.length} query pack(s): ${queryPacks.join(", ")}`
     );
+    const ram = resources?.ram?.trim();
+    const resourceArgs = buildResourceArgs({
+      ram: ram !== void 0 && ram !== "" ? ram : DEFAULT_ANALYZE_RAM,
+      threads: resources?.threads
+    });
     const packSarifFiles = [];
     for (let i = 0; i < queryPacks.length; i++) {
       const queryPack = queryPacks[i];
@@ -33573,7 +33600,7 @@ var CodeQLAnalyzer = class {
           "database",
           "analyze",
           dbPath,
-          "--ram=4000",
+          ...resourceArgs,
           "--format=sarif-latest",
           `--output=${packOutputPath}`,
           "--threat-model=local,remote",
@@ -33593,7 +33620,7 @@ var CodeQLAnalyzer = class {
             "database",
             "analyze",
             dbPath,
-            "--ram=4000",
+            ...resourceArgs,
             "--format=sarif-latest",
             `--output=${packOutputPath}`,
             "--threat-model=local,remote",
@@ -33741,15 +33768,15 @@ async function getCodeQLPathFromSystem() {
 }
 
 // src/codeql/utils/find-codeql-bundle-asset.ts
-function findCodeQLBundleAsset(assets, platform4) {
+function findCodeQLBundleAsset(assets, platform3) {
   const gzAsset = assets.find(
-    (asset) => typeof asset.name === "string" && asset.name === `codeql-bundle-${platform4}.tar.gz`
+    (asset) => typeof asset.name === "string" && asset.name === `codeql-bundle-${platform3}.tar.gz`
   );
   if (gzAsset !== void 0 && gzAsset !== null) {
     return gzAsset;
   }
   const zstAsset = assets.find(
-    (asset) => typeof asset.name === "string" && asset.name === `codeql-bundle-${platform4}.tar.zst`
+    (asset) => typeof asset.name === "string" && asset.name === `codeql-bundle-${platform3}.tar.zst`
   );
   if (zstAsset !== void 0 && zstAsset !== null) {
     return zstAsset;
@@ -33758,9 +33785,24 @@ function findCodeQLBundleAsset(assets, platform4) {
 }
 
 // src/codeql/utils/find-codeql-common-paths.ts
-var process6 = __toESM(require("node:process"));
+var import_node_process2 = __toESM(require("node:process"));
+function expandVersionGlob(pattern) {
+  const starIndex = pattern.indexOf("*");
+  if (starIndex === -1)
+    return [pattern];
+  const prefix = pattern.slice(0, starIndex);
+  const suffix = pattern.slice(starIndex + 1);
+  const baseDir = prefix.replace(/[\\/]$/u, "");
+  let entries;
+  try {
+    entries = FileUtils.listDirectory(baseDir);
+  } catch {
+    return [];
+  }
+  return [...entries].sort((a, b) => b.localeCompare(a, void 0, { numeric: true })).map((entry) => `${prefix}${entry}${suffix}`);
+}
 function findCodeQLInCommonPaths() {
-  const isWindows = process6.platform === "win32";
+  const isWindows = import_node_process2.default.platform === "win32";
   const commonPaths = isWindows ? [
     "C:\\hostedtoolcache\\windows\\CodeQL\\*\\x64\\codeql\\codeql.exe",
     "D:\\a\\_temp\\codeql-runner\\codeql.exe",
@@ -33770,13 +33812,15 @@ function findCodeQLInCommonPaths() {
     "/home/runner/codeql/codeql",
     "./codeql/codeql"
   ];
-  for (const commonPath of commonPaths) {
-    try {
-      if (FileUtils.exists(commonPath)) {
-        Logger.info(`Found CodeQL at: ${commonPath}`);
-        return commonPath;
+  for (const pattern of commonPaths) {
+    for (const candidate of expandVersionGlob(pattern)) {
+      try {
+        if (FileUtils.exists(candidate)) {
+          Logger.info(`Found CodeQL at: ${candidate}`);
+          return candidate;
+        }
+      } catch {
       }
-    } catch {
     }
   }
   return null;
@@ -33808,9 +33852,9 @@ async function getLatestCodeQLRelease() {
 }
 
 // src/codeql/utils/platform-utils.ts
-var import_node_process2 = __toESM(require("node:process"));
+var import_node_process3 = __toESM(require("node:process"));
 function getPlatformIdentifier() {
-  switch (import_node_process2.default.platform) {
+  switch (import_node_process3.default.platform) {
     case "darwin":
       return "osx64";
     case "win32":
@@ -33861,10 +33905,10 @@ var CodeQLInstaller = class {
     Logger.info("Fetching latest CodeQL bundle information from GitHub API...");
     try {
       const apiResponse = await getLatestCodeQLRelease();
-      const platform4 = getPlatformIdentifier();
-      const bundleAsset = findCodeQLBundleAsset(apiResponse.assets, platform4);
+      const platform3 = getPlatformIdentifier();
+      const bundleAsset = findCodeQLBundleAsset(apiResponse.assets, platform3);
       if (!bundleAsset) {
-        throw new Error(`No CodeQL bundle found for platform: ${platform4}`);
+        throw new Error(`No CodeQL bundle found for platform: ${platform3}`);
       }
       Logger.info(
         `Downloading CodeQL bundle: ${bundleAsset.name} (${bundleAsset.size} bytes)`
@@ -33890,7 +33934,7 @@ var CodeQLInstaller = class {
         throw new Error(`Download failed: file too small (${stats.size} bytes)`);
       }
       Logger.info(`Downloaded ${stats.size} bytes`);
-      await this.extractCodeQLBundle(bundleAsset, apiResponse, platform4);
+      await this.extractCodeQLBundle(bundleAsset, apiResponse, platform3);
       const codeqlBinary = process8.platform === "win32" ? "codeql/codeql.exe" : "codeql/codeql";
       if (process8.platform !== "win32") {
         await (0, import_exec6.exec)("chmod", ["+x", codeqlBinary]);
@@ -33905,7 +33949,7 @@ var CodeQLInstaller = class {
       throw new Error(`CodeQL download failed: ${errorMessage}`);
     }
   }
-  static async extractCodeQLBundle(bundleAsset, apiResponse, platform4) {
+  static async extractCodeQLBundle(bundleAsset, apiResponse, platform3) {
     if (bundleAsset.name.endsWith(".tar.gz")) {
       await (0, import_exec6.exec)("tar", ["-xzf", bundleAsset.name]);
     } else if (bundleAsset.name.endsWith(".tar.zst")) {
@@ -33913,7 +33957,7 @@ var CodeQLInstaller = class {
         "Zstandard format detected, but falling back to tar.gz for compatibility"
       );
       const gzAsset = apiResponse.assets.find(
-        (asset) => asset.name === `codeql-bundle-${platform4}.tar.gz`
+        (asset) => asset.name === `codeql-bundle-${platform3}.tar.gz`
       );
       if (gzAsset) {
         Logger.info(`Re-downloading .tar.gz version: ${gzAsset.name}`);
@@ -35803,7 +35847,7 @@ _\u2026 and ${omitted} more location(s), omitted to keep this issue within GitHu
 }
 function buildDetails(result, budget) {
   if (budget < MIN_JSON_BUDGET) {
-    return "_SARIF finding details omitted: the finding is too large to include within GitHub's issue size limit. See the SARIF artifact or the Security tab for the full data._";
+    return "_SARIF finding details omitted: the finding is too large to include within GitHub's issue size limit. Re-run the analysis to inspect the full result._";
   }
   const full = JSON.stringify(result, null, JSON_INDENT);
   const details = (json, note2) => [
@@ -35828,13 +35872,13 @@ function buildDetails(result, budget) {
     }
   }
   if (dropped.length > 0) {
-    const note2 = `> \u26A0\uFE0F Trimmed to fit GitHub's issue size limit. Omitted: ${dropped.join(", ")}. The full data is in the SARIF artifact.`;
+    const note2 = `> \u26A0\uFE0F Trimmed to fit GitHub's issue size limit. Omitted: ${dropped.join(", ")}. The rule and locations above identify the finding.`;
     const trimmed = JSON.stringify(summarised, null, JSON_INDENT);
     const rendered = details(trimmed, note2);
     if (rendered.length <= budget)
       return rendered;
   }
-  const note = `> \u26A0\uFE0F Truncated to fit GitHub's issue size limit. The full data is in the SARIF artifact.`;
+  const note = `> \u26A0\uFE0F Truncated to fit GitHub's issue size limit.`;
   const overhead = details("", note).length;
   const jsonBudget = Math.max(budget - overhead, 0);
   return details(truncate(full, jsonBudget, "\u2026 (truncated)"), note);
@@ -36024,11 +36068,13 @@ async function run() {
     const codeqlPath = await CodeQLInstaller.initializeCodeQL(primaryLanguage);
     Logger.info(`CodeQL initialized at: ${codeqlPath}`);
     await QueryPackManager.downloadQueryPacks(codeqlPath);
+    const resources = { ram: inputs.ram, threads: inputs.threads };
     await CodeQLDatabase.createDatabase(
       codeqlPath,
       filteredPath,
       primaryLanguage,
-      config ?? void 0
+      config ?? void 0,
+      resources
     );
     Logger.info("CodeQL database created successfully");
     await CodeQLAnalyzer.analyzeWithCodeQL(
@@ -36036,7 +36082,8 @@ async function run() {
       languages.join(","),
       // Pass all languages
       inputs.qlsProfile,
-      config ?? void 0
+      config ?? void 0,
+      resources
     );
     Logger.info("CodeQL analysis completed");
     const sarif = SarifProcessor.processSarifFile(CodeQLAnalyzer.getResultsPath());

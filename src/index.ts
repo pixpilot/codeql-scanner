@@ -47,12 +47,15 @@ async function run(): Promise<void> {
     // Step 3.5: Download query packs for better compatibility
     await QueryPackManager.downloadQueryPacks(codeqlPath);
 
+    const resources = { ram: inputs.ram, threads: inputs.threads };
+
     // Step 4: Create CodeQL database
     await CodeQLDatabase.createDatabase(
       codeqlPath,
       filteredPath,
       primaryLanguage,
       config ?? undefined,
+      resources,
     );
     Logger.info('CodeQL database created successfully');
 
@@ -62,6 +65,7 @@ async function run(): Promise<void> {
       languages.join(','), // Pass all languages
       inputs.qlsProfile,
       config ?? undefined,
+      resources,
     );
     Logger.info('CodeQL analysis completed');
 

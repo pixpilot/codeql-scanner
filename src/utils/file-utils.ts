@@ -16,6 +16,11 @@ export class FileUtils {
     return fs.readFileSync(filePath, 'utf8');
   }
 
+  /** Names of the entries in `dirPath`. Throws if the directory does not exist. */
+  static listDirectory(dirPath: string): string[] {
+    return fs.readdirSync(dirPath);
+  }
+
   static writeFile(filePath: string, content: string): void {
     fs.writeFileSync(filePath, content, 'utf8');
   }

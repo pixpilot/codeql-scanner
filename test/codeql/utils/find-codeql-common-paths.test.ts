@@ -2,30 +2,87 @@ import { findCodeQLInCommonPaths } from '../../../src/codeql/utils/find-codeql-c
 import { FileUtils } from '../../../src/utils/file-utils';
 
 vi.mock('../../../src/utils/file-utils');
+vi.mock('../../../src/utils/logger', () => ({
+  Logger: {
+    info: vi.fn(),
+  },
+}));
+
+const realPlatform = process.platform;
+function setPlatform(value: string): void {
+  Object.defineProperty(process, 'platform', { value, configurable: true });
+}
 
 describe('findCodeQLInCommonPaths', () => {
   let existsSpy: any;
+  let listSpy: any;
 
   beforeEach(() => {
-    existsSpy = vi.spyOn(FileUtils, 'exists');
     vi.clearAllMocks();
+    existsSpy = vi.spyOn(FileUtils, 'exists');
+    listSpy = vi.spyOn(FileUtils, 'listDirectory');
+    setPlatform('linux');
+    // Default: nothing on disk.
+    existsSpy.mockReturnValue(false);
+    listSpy.mockImplementation(() => {
+      throw new Error('ENOENT');
+    });
   });
 
-  it('returns the first found path', () => {
-    existsSpy.mockImplementation((path: unknown) => path === null);
-    expect(findCodeQLInCommonPaths()).toBeNull();
+  afterEach(() => {
+    setPlatform(realPlatform);
   });
 
   it('returns null if no path is found', () => {
-    existsSpy.mockReturnValue(false);
     expect(findCodeQLInCommonPaths()).toBeNull();
   });
 
+  it('finds CodeQL in the hosted tool cache by expanding the version glob', () => {
+    listSpy.mockReturnValue(['2.15.5']);
+    existsSpy.mockImplementation(
+      (p: string) => p === '/opt/hostedtoolcache/CodeQL/2.15.5/x64/codeql',
+    );
+
+    expect(findCodeQLInCommonPaths()).toBe(
+      '/opt/hostedtoolcache/CodeQL/2.15.5/x64/codeql',
+    );
+    expect(listSpy).toHaveBeenCalledWith('/opt/hostedtoolcache/CodeQL');
+  });
+
+  it('prefers the newest version when the tool cache holds several', () => {
+    // Deliberately unsorted, and including versions that sort wrong lexically (9 vs 10).
+    listSpy.mockReturnValue(['2.9.4', '2.16.0', '2.10.1']);
+    existsSpy.mockReturnValue(true);
+
+    expect(findCodeQLInCommonPaths()).toBe(
+      '/opt/hostedtoolcache/CodeQL/2.16.0/x64/codeql',
+    );
+  });
+
+  it('falls back to literal paths when the tool cache is absent', () => {
+    existsSpy.mockImplementation((p: string) => p === '/home/runner/codeql/codeql');
+
+    expect(findCodeQLInCommonPaths()).toBe('/home/runner/codeql/codeql');
+  });
+
   it('skips paths that throw errors', () => {
-    existsSpy.mockImplementation((path: unknown) => {
-      if (path === '/opt/hostedtoolcache/CodeQL/*/x64/codeql') throw new Error('fail');
-      return path === null;
+    existsSpy.mockImplementation((p: string) => {
+      if (p === '/home/runner/codeql/codeql') throw new Error('fail');
+      return p === './codeql/codeql';
     });
-    expect(findCodeQLInCommonPaths()).toBeNull();
+
+    expect(findCodeQLInCommonPaths()).toBe('./codeql/codeql');
+  });
+
+  it('expands the tool cache glob on Windows too', () => {
+    setPlatform('win32');
+    listSpy.mockReturnValue(['2.16.0']);
+    existsSpy.mockReturnValue(true);
+
+    const result = findCodeQLInCommonPaths();
+
+    expect(listSpy).toHaveBeenCalledWith('C:\\hostedtoolcache\\windows\\CodeQL');
+    expect(result).toContain('2.16.0');
+    expect(result).toContain('codeql.exe');
   });
 });
