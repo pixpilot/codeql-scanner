@@ -33801,6 +33801,15 @@ function expandVersionGlob(pattern) {
   }
   return [...entries].sort((a, b) => b.localeCompare(a, void 0, { numeric: true })).map((entry) => `${prefix}${entry}${suffix}`);
 }
+function isExecutableFile(candidate) {
+  if (!FileUtils.exists(candidate))
+    return false;
+  try {
+    return !FileUtils.isDirectory(candidate);
+  } catch {
+    return false;
+  }
+}
 function findCodeQLInCommonPaths() {
   const isWindows = import_node_process2.default.platform === "win32";
   const commonPaths = isWindows ? [
@@ -33808,14 +33817,17 @@ function findCodeQLInCommonPaths() {
     "D:\\a\\_temp\\codeql-runner\\codeql.exe",
     ".\\codeql\\codeql.exe"
   ] : [
-    "/opt/hostedtoolcache/CodeQL/*/x64/codeql",
+    // The tool cache holds the extracted bundle, so the CLI sits inside a `codeql`
+    // directory: <version>/x64/codeql/codeql. Pointing at the directory itself hands
+    // exec something it cannot run.
+    "/opt/hostedtoolcache/CodeQL/*/x64/codeql/codeql",
     "/home/runner/codeql/codeql",
     "./codeql/codeql"
   ];
   for (const pattern of commonPaths) {
     for (const candidate of expandVersionGlob(pattern)) {
       try {
-        if (FileUtils.exists(candidate)) {
+        if (isExecutableFile(candidate)) {
           Logger.info(`Found CodeQL at: ${candidate}`);
           return candidate;
         }

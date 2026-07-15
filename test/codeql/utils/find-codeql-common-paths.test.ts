@@ -16,14 +16,17 @@ function setPlatform(value: string): void {
 describe('findCodeQLInCommonPaths', () => {
   let existsSpy: any;
   let listSpy: any;
+  let isDirectorySpy: any;
 
   beforeEach(() => {
     vi.clearAllMocks();
     existsSpy = vi.spyOn(FileUtils, 'exists');
     listSpy = vi.spyOn(FileUtils, 'listDirectory');
+    isDirectorySpy = vi.spyOn(FileUtils, 'isDirectory');
     setPlatform('linux');
-    // Default: nothing on disk.
+    // Default: nothing on disk, and any hit is a plain file.
     existsSpy.mockReturnValue(false);
+    isDirectorySpy.mockReturnValue(false);
     listSpy.mockImplementation(() => {
       throw new Error('ENOENT');
     });
@@ -37,16 +40,45 @@ describe('findCodeQLInCommonPaths', () => {
     expect(findCodeQLInCommonPaths()).toBeNull();
   });
 
-  it('finds CodeQL in the hosted tool cache by expanding the version glob', () => {
+  it('finds the CodeQL binary inside the tool cache by expanding the version glob', () => {
     listSpy.mockReturnValue(['2.15.5']);
     existsSpy.mockImplementation(
-      (p: string) => p === '/opt/hostedtoolcache/CodeQL/2.15.5/x64/codeql',
+      (p: string) => p === '/opt/hostedtoolcache/CodeQL/2.15.5/x64/codeql/codeql',
     );
 
     expect(findCodeQLInCommonPaths()).toBe(
-      '/opt/hostedtoolcache/CodeQL/2.15.5/x64/codeql',
+      '/opt/hostedtoolcache/CodeQL/2.15.5/x64/codeql/codeql',
     );
     expect(listSpy).toHaveBeenCalledWith('/opt/hostedtoolcache/CodeQL');
+  });
+
+  it('never returns the codeql directory that sits beside the binary', () => {
+    // Regression: the tool cache holds <version>/x64/codeql/ as a directory, and
+    // fs.existsSync says true for it. Returning it makes exec fail with
+    // "Unable to locate executable file".
+    listSpy.mockReturnValue(['2.26.0']);
+    existsSpy.mockReturnValue(true);
+    isDirectorySpy.mockImplementation(
+      (p: string) => p === '/opt/hostedtoolcache/CodeQL/2.26.0/x64/codeql',
+    );
+
+    expect(findCodeQLInCommonPaths()).not.toBe(
+      '/opt/hostedtoolcache/CodeQL/2.26.0/x64/codeql',
+    );
+    expect(findCodeQLInCommonPaths()).toBe(
+      '/opt/hostedtoolcache/CodeQL/2.26.0/x64/codeql/codeql',
+    );
+  });
+
+  it('keeps searching when a candidate exists but is a directory', () => {
+    listSpy.mockReturnValue(['2.26.0']);
+    existsSpy.mockReturnValue(true);
+    // Everything in the tool cache is a directory: fall through to a real binary.
+    isDirectorySpy.mockImplementation((p: string) =>
+      p.startsWith('/opt/hostedtoolcache'),
+    );
+
+    expect(findCodeQLInCommonPaths()).toBe('/home/runner/codeql/codeql');
   });
 
   it('prefers the newest version when the tool cache holds several', () => {
@@ -55,7 +87,7 @@ describe('findCodeQLInCommonPaths', () => {
     existsSpy.mockReturnValue(true);
 
     expect(findCodeQLInCommonPaths()).toBe(
-      '/opt/hostedtoolcache/CodeQL/2.16.0/x64/codeql',
+      '/opt/hostedtoolcache/CodeQL/2.16.0/x64/codeql/codeql',
     );
   });
 

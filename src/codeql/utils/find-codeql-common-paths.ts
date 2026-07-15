@@ -33,6 +33,21 @@ function expandVersionGlob(pattern: string): string[] {
 }
 
 /**
+ * True only for a path that exists and is a file. `fs.existsSync` also returns true for
+ * directories, and the CodeQL tool cache has a `codeql` directory sitting next to the
+ * `codeql` binary, so an existence check alone can return something exec cannot run.
+ */
+function isExecutableFile(candidate: string): boolean {
+  if (!FileUtils.exists(candidate)) return false;
+
+  try {
+    return !FileUtils.isDirectory(candidate);
+  } catch {
+    return false;
+  }
+}
+
+/**
  * Searches for CodeQL in common locations used by GitHub Actions and local setups.
  * @returns The path to CodeQL if found, otherwise null.
  */
@@ -46,7 +61,10 @@ export function findCodeQLInCommonPaths(): string | null {
         '.\\codeql\\codeql.exe',
       ]
     : [
-        '/opt/hostedtoolcache/CodeQL/*/x64/codeql',
+        // The tool cache holds the extracted bundle, so the CLI sits inside a `codeql`
+        // directory: <version>/x64/codeql/codeql. Pointing at the directory itself hands
+        // exec something it cannot run.
+        '/opt/hostedtoolcache/CodeQL/*/x64/codeql/codeql',
         '/home/runner/codeql/codeql',
         './codeql/codeql',
       ];
@@ -54,7 +72,7 @@ export function findCodeQLInCommonPaths(): string | null {
   for (const pattern of commonPaths) {
     for (const candidate of expandVersionGlob(pattern)) {
       try {
-        if (FileUtils.exists(candidate)) {
+        if (isExecutableFile(candidate)) {
           Logger.info(`Found CodeQL at: ${candidate}`);
           return candidate;
         }
