@@ -76,6 +76,15 @@ async function run(): Promise<void> {
     const errorStack = error instanceof Error ? error.stack : '';
     Logger.setFailed(`Action failed: ${errorMessage}`);
     Logger.debug(errorStack ?? 'No stack trace available');
+    return;
+  }
+
+  // Errors that were handled locally still annotate the run; without this the job
+  // would report success while showing error annotations.
+  if (!Logger.hasFailed() && Logger.getErrorCount() > 0) {
+    Logger.setFailed(
+      `Action completed with ${Logger.getErrorCount()} error(s). See the error annotations above.`,
+    );
   }
 }
 

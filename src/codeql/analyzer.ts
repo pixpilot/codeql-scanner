@@ -56,10 +56,18 @@ export class CodeQLAnalyzer {
         }
       }
 
+      // No output at all means the scan never ran; failing here stops a later
+      // "Clean scan" from being reported for an analysis that produced nothing.
+      if (sarifFiles.length === 0) {
+        throw new Error(
+          `Analysis produced no results for any of the requested language(s): ${languages.join(', ')}. No database was found to analyze.`,
+        );
+      }
+
       // Merge SARIF files if multiple languages were analyzed
       if (sarifFiles.length > 1) {
         await this.mergeSarifFiles(sarifFiles, outputPath);
-      } else if (sarifFiles.length === 1) {
+      } else {
         // Just copy the single SARIF file
         await this.copySarifFile(sarifFiles[0], outputPath);
       }
@@ -175,6 +183,14 @@ export class CodeQLAnalyzer {
       }
     }
 
+    // Every pack failed (including the fallback), so nothing was scanned. Fail loudly
+    // rather than leave no SARIF behind, which would later be read as a clean scan.
+    if (packSarifFiles.length === 0) {
+      throw new Error(
+        `CodeQL analysis failed for ${language}: none of the ${queryPacks.length} query pack(s) could be analyzed, and the fallback pack also failed. See the warnings above for the underlying errors.`,
+      );
+    }
+
     // If we have multiple SARIF files from different packs, merge them
     if (packSarifFiles.length > 1) {
       Logger.info(`Merging ${packSarifFiles.length} query pack results...`);
@@ -216,7 +232,11 @@ export class CodeQLAnalyzer {
           }
         } catch (error) {
           const errorMessage = error instanceof Error ? error.message : String(error);
-          Logger.warning(`Failed to parse SARIF file ${sarifFile}: ${errorMessage}`);
+          // Not fatal to the merge, but findings from this pack are lost, so the run
+          // must not report success on an incomplete result set.
+          Logger.error(
+            `Failed to parse SARIF file ${sarifFile}: ${errorMessage}. Findings from this file are missing from the results.`,
+          );
         }
       }
     }

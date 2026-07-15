@@ -29,12 +29,17 @@ describe('sarifProcessor', () => {
       vi.clearAllMocks();
     });
 
-    it('should return null if SARIF file does not exist', () => {
+    it('should report an error rather than a clean scan if the SARIF file does not exist', async () => {
+      const { Logger } = await import('../../src/utils/logger');
       mockFileUtils.exists.mockReturnValue(false);
 
       const result = SarifProcessor.processSarifFile('nonexistent.sarif');
 
       expect(result).toBeNull();
+      expect(Logger.error).toHaveBeenCalledWith(
+        expect.stringContaining('cannot be treated as a clean scan'),
+      );
+      expect(Logger.info).not.toHaveBeenCalledWith(expect.stringContaining('Clean scan'));
     });
 
     it('should return null if SARIF file has no runs', () => {

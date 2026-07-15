@@ -35,6 +35,9 @@ export interface CodeQLResult {
       text: string;
     };
   }>;
+  /** Dataflow traces. Usually the bulk of a large SARIF result. */
+  codeFlows?: unknown[];
+  relatedLocations?: unknown[];
 }
 
 export interface SarifRun {

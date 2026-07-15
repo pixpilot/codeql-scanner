@@ -33231,7 +33231,9 @@ var FileUtils = class {
 
 // src/utils/logger.ts
 var core = __toESM(require_core());
-var Logger = class {
+var Logger = class _Logger {
+  static errorCount = 0;
+  static failed = false;
   static info(message) {
     core.info(message);
   }
@@ -33239,13 +33241,27 @@ var Logger = class {
     core.warning(message);
   }
   static error(message) {
+    _Logger.errorCount++;
     core.error(message);
   }
   static debug(message) {
     core.debug(message);
   }
   static setFailed(message) {
+    _Logger.errorCount++;
+    _Logger.failed = true;
     core.setFailed(message);
+  }
+  /** Number of errors logged so far. Used to fail the job even when an error was handled locally. */
+  static getErrorCount() {
+    return _Logger.errorCount;
+  }
+  static hasFailed() {
+    return _Logger.failed;
+  }
+  static reset() {
+    _Logger.errorCount = 0;
+    _Logger.failed = false;
   }
 };
 
@@ -33508,9 +33524,14 @@ var CodeQLAnalyzer = class {
           Logger.warning(`Database not found for language: ${lang} at ${langDbPath}`);
         }
       }
+      if (sarifFiles.length === 0) {
+        throw new Error(
+          `Analysis produced no results for any of the requested language(s): ${languages.join(", ")}. No database was found to analyze.`
+        );
+      }
       if (sarifFiles.length > 1) {
         await this.mergeSarifFiles(sarifFiles, outputPath);
-      } else if (sarifFiles.length === 1) {
+      } else {
         await this.copySarifFile(sarifFiles[0], outputPath);
       }
       if (config?.["query-filters"] && config["query-filters"].length > 0) {
@@ -33589,6 +33610,11 @@ var CodeQLAnalyzer = class {
         }
       }
     }
+    if (packSarifFiles.length === 0) {
+      throw new Error(
+        `CodeQL analysis failed for ${language}: none of the ${queryPacks.length} query pack(s) could be analyzed, and the fallback pack also failed. See the warnings above for the underlying errors.`
+      );
+    }
     if (packSarifFiles.length > 1) {
       Logger.info(`Merging ${packSarifFiles.length} query pack results...`);
       await this.mergeSarifFiles(packSarifFiles, outputPath);
@@ -33617,12 +33643,14 @@ var CodeQLAnalyzer = class {
           }
         } catch (error2) {
           const errorMessage = error2 instanceof Error ? error2.message : String(error2);
-          Logger.warning(`Failed to parse SARIF file ${sarifFile}: ${errorMessage}`);
+          Logger.error(
+            `Failed to parse SARIF file ${sarifFile}: ${errorMessage}. Findings from this file are missing from the results.`
+          );
         }
       }
     }
-    const JSON_INDENT = 2;
-    FileUtils.writeFile(outputPath, JSON.stringify(mergedSarif, null, JSON_INDENT));
+    const JSON_INDENT2 = 2;
+    FileUtils.writeFile(outputPath, JSON.stringify(mergedSarif, null, JSON_INDENT2));
     Logger.info(`Merged SARIF saved to: ${outputPath}`);
   }
   static async copySarifFile(sourcePath, targetPath) {
@@ -33658,8 +33686,8 @@ var CodeQLAnalyzer = class {
           }
         }
       }
-      const JSON_INDENT = 2;
-      FileUtils.writeFile(sarifPath, JSON.stringify(sarif, null, JSON_INDENT));
+      const JSON_INDENT2 = 2;
+      FileUtils.writeFile(sarifPath, JSON.stringify(sarif, null, JSON_INDENT2));
       Logger.info(
         `Query filters applied: ${filteredCount} results filtered out of ${totalCount}`
       );
@@ -35737,6 +35765,104 @@ var FileFilter = class {
 var crypto = __toESM(require("node:crypto"));
 var import_github = __toESM(require_github());
 var github = __toESM(require_github());
+
+// src/github/utils/format-issue-body.ts
+var ISSUE_BODY_LIMIT = 65536;
+var RESERVED_MARGIN = 1024;
+var BODY_BUDGET = ISSUE_BODY_LIMIT - RESERVED_MARGIN;
+var MAX_MESSAGE_LENGTH = 4e3;
+var MAX_LOCATIONS = 50;
+var MIN_JSON_BUDGET = 1e3;
+var JSON_INDENT = 2;
+var VERBOSE_FIELDS = ["codeFlows", "relatedLocations"];
+function truncate(text, max, note) {
+  if (text.length <= max)
+    return text;
+  return `${text.slice(0, max)}
+${note}`;
+}
+function buildLocationsList(locations) {
+  if (!locations || locations.length === 0)
+    return "_No locations reported._";
+  const shown = locations.slice(0, MAX_LOCATIONS);
+  let list = "";
+  for (const loc of shown) {
+    const locFile = loc.physicalLocation.artifactLocation.uri;
+    const locLine = loc.physicalLocation.region.startLine;
+    const locMessage = loc.message ? ` - ${loc.message.text}` : "";
+    list += `- **File:** \`${locFile}\` **Line:** ${locLine}${locMessage}
+`;
+  }
+  const omitted = locations.length - shown.length;
+  if (omitted > 0) {
+    list += `
+_\u2026 and ${omitted} more location(s), omitted to keep this issue within GitHub's size limit._
+`;
+  }
+  return list;
+}
+function buildDetails(result, budget) {
+  if (budget < MIN_JSON_BUDGET) {
+    return "_SARIF finding details omitted: the finding is too large to include within GitHub's issue size limit. See the SARIF artifact or the Security tab for the full data._";
+  }
+  const full = JSON.stringify(result, null, JSON_INDENT);
+  const details = (json, note2) => [
+    "<details>",
+    `<summary>Click to view SARIF finding details</summary>`,
+    ...note2 !== void 0 && note2 !== "" ? ["", note2] : [],
+    "",
+    "```json",
+    json,
+    "```",
+    "</details>"
+  ].join("\n");
+  if (details(full).length <= budget)
+    return details(full);
+  const summarised = { ...result };
+  const dropped = [];
+  for (const field of VERBOSE_FIELDS) {
+    const value = result[field];
+    if (value !== void 0) {
+      delete summarised[field];
+      dropped.push(`${field} (${value.length} entries)`);
+    }
+  }
+  if (dropped.length > 0) {
+    const note2 = `> \u26A0\uFE0F Trimmed to fit GitHub's issue size limit. Omitted: ${dropped.join(", ")}. The full data is in the SARIF artifact.`;
+    const trimmed = JSON.stringify(summarised, null, JSON_INDENT);
+    const rendered = details(trimmed, note2);
+    if (rendered.length <= budget)
+      return rendered;
+  }
+  const note = `> \u26A0\uFE0F Truncated to fit GitHub's issue size limit. The full data is in the SARIF artifact.`;
+  const overhead = details("", note).length;
+  const jsonBudget = Math.max(budget - overhead, 0);
+  return details(truncate(full, jsonBudget, "\u2026 (truncated)"), note);
+}
+function formatIssueBody(result, findingHash) {
+  const { ruleId, message } = result;
+  const msg = truncate(message.text, MAX_MESSAGE_LENGTH, "\u2026 (message truncated)");
+  const header = [
+    `## \u{1F6A8} Security Alert: ${ruleId}`,
+    `<strong>Message:</strong> ${msg}`,
+    `<strong>Finding ID:</strong> <code>${findingHash}</code>`,
+    "---",
+    "### Vulnerability Locations",
+    buildLocationsList(result.locations),
+    "---"
+  ].join("\n\n");
+  const footer = [
+    "",
+    "---",
+    "*This issue was automatically generated by a custom CodeQL workflow.*"
+  ].join("\n\n");
+  const separators = "\n\n".length;
+  const detailsBudget = BODY_BUDGET - header.length - footer.length - separators;
+  const body = [header, buildDetails(result, detailsBudget), footer].join("\n\n");
+  return body.length > ISSUE_BODY_LIMIT ? body.slice(0, ISSUE_BODY_LIMIT) : body;
+}
+
+// src/github/issue-creator.ts
 var IssueCreator = class {
   static async createIssuesFromSarif(sarif, token) {
     const FINGERPRINT_LENGTH = 8;
@@ -35780,44 +35906,13 @@ var IssueCreator = class {
     await this.createIssuesInParallel(octokit, issueCreations);
   }
   static createIssueFromResult(result, fingerprintLength) {
-    const { ruleId, message, partialFingerprints, locations } = result;
+    const { ruleId, message, partialFingerprints } = result;
     const msg = message.text;
     const findingHash = crypto.createHash("md5").update(`${ruleId}|${JSON.stringify(partialFingerprints)}|${msg}`).digest("hex").substring(0, fingerprintLength);
     const title = `CodeQL Finding: ${ruleId} [${findingHash}]`;
-    let locationsList = "";
-    if (locations) {
-      for (const loc of locations) {
-        const locFile = loc.physicalLocation.artifactLocation.uri;
-        const locLine = loc.physicalLocation.region.startLine;
-        const locMessage = loc.message ? ` - ${loc.message.text}` : "";
-        locationsList += `- **File:** \`${locFile}\` **Line:** ${locLine}${locMessage}
-`;
-      }
-    }
-    const JSON_INDENT = 2;
-    const resultJson = JSON.stringify(result, null, JSON_INDENT);
-    const body = [
-      `## \u{1F6A8} Security Alert: ${ruleId}`,
-      `<strong>Message:</strong> ${msg}`,
-      `<strong>Finding ID:</strong> <code>${findingHash}</code>`,
-      "---",
-      "### Vulnerability Locations",
-      locationsList,
-      "---",
-      "<details>",
-      "<summary>Click to view SARIF finding details</summary>",
-      "",
-      "```json",
-      resultJson,
-      "```",
-      "</details>",
-      "",
-      "---",
-      "*This issue was automatically generated by a custom CodeQL workflow.*"
-    ].join("\n\n");
     return {
       title,
-      body,
+      body: formatIssueBody(result, findingHash),
       labels: ["codeql-finding"]
     };
   }
@@ -35869,9 +35964,10 @@ var IssueCreator = class {
     if (otherErrors > 0) {
       Logger.error(`\u274C Other errors: ${otherErrors} issues`);
     }
-    if (permissionErrors > 0 && successCount === 0) {
+    const failures = permissionErrors + otherErrors;
+    if (failures > 0) {
       Logger.setFailed(
-        "No issues could be created due to insufficient permissions. Please check the workflow permissions."
+        `Failed to create ${failures} of ${issueCreations.length} issues (${permissionErrors} permission error(s), ${otherErrors} other error(s)). See the errors above.`
       );
     }
   }
@@ -35881,7 +35977,9 @@ var IssueCreator = class {
 var SarifProcessor = class {
   static processSarifFile(sarifPath) {
     if (!FileUtils.exists(sarifPath)) {
-      Logger.info("No SARIF file found. Clean scan.");
+      Logger.error(
+        `No SARIF file was produced at ${sarifPath}. The analysis did not complete, so these results cannot be treated as a clean scan.`
+      );
       return null;
     }
     try {
@@ -35951,6 +36049,12 @@ async function run() {
     const errorStack = error2 instanceof Error ? error2.stack : "";
     Logger.setFailed(`Action failed: ${errorMessage}`);
     Logger.debug(errorStack ?? "No stack trace available");
+    return;
+  }
+  if (!Logger.hasFailed() && Logger.getErrorCount() > 0) {
+    Logger.setFailed(
+      `Action completed with ${Logger.getErrorCount()} error(s). See the error annotations above.`
+    );
   }
 }
 if (require.main === module) {

@@ -1,6 +1,7 @@
 import * as ExecModule from '@actions/exec';
 import { CodeQLAnalyzer } from '../../src/codeql/analyzer';
 import * as FileUtilsModule from '../../src/utils/file-utils';
+import { Logger } from '../../src/utils/logger';
 
 vi.mock('@actions/exec', () => ({
   exec: vi.fn(),
@@ -18,6 +19,7 @@ vi.mock('../../src/utils/logger', () => ({
     info: vi.fn(),
     warning: vi.fn(),
     debug: vi.fn(),
+    error: vi.fn(),
   },
 }));
 vi.mock('../../src/codeql/query-packs', () => ({
@@ -121,6 +123,41 @@ describe('codeQLAnalyzer', () => {
       expect(writtenSarif.runs[0].results).toHaveLength(1);
       expect(writtenSarif.runs[0].results[0].ruleId).toBe('keep-this');
     }
+  });
+
+  it('analyzeWithCodeQL throws when every query pack and the fallback fail', async () => {
+    vi.mocked(exec).mockRejectedValue(new Error('CodeQL exploded'));
+
+    await expect(
+      CodeQLAnalyzer.analyzeWithCodeQL('/codeql', 'python', 'security-extended'),
+    ).rejects.toThrow(/none of the 1 query pack\(s\) could be analyzed/u);
+  });
+
+  it('analyzeWithCodeQL throws when no database exists for any language', async () => {
+    vi.mocked(exec).mockResolvedValue(0);
+    vi.mocked(FileUtils.exists).mockReturnValue(false);
+
+    await expect(
+      CodeQLAnalyzer.analyzeWithCodeQL('/codeql', 'python', 'security-extended', {
+        languages: 'python,javascript',
+      }),
+    ).rejects.toThrow(/produced no results for any of the requested language/u);
+
+    expect(exec).not.toHaveBeenCalled();
+  });
+
+  it('analyzeWithCodeQL reports an error when a SARIF file cannot be parsed during merge', async () => {
+    vi.mocked(exec).mockResolvedValue(0);
+    vi.mocked(FileUtils.exists).mockReturnValue(true);
+    vi.mocked(FileUtils.readFile).mockReturnValue('{ not valid json');
+
+    await CodeQLAnalyzer.analyzeWithCodeQL('/codeql', 'python', 'security-extended', {
+      languages: 'python,javascript',
+    });
+
+    expect(Logger.error).toHaveBeenCalledWith(
+      expect.stringContaining('Findings from this file are missing from the results'),
+    );
   });
 
   it('getResultsPath returns the expected SARIF path', () => {

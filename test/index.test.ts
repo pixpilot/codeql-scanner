@@ -11,6 +11,7 @@ import { FileFilter } from '../src/file-filtering/filter';
 import { IssueCreator } from '../src/github/issue-creator';
 import { run } from '../src/index';
 import { SarifProcessor } from '../src/sarif/processor';
+import { Logger } from '../src/utils/logger';
 
 // Mock all dependencies
 vi.mock('@actions/core');
@@ -38,6 +39,7 @@ describe('action', () => {
 
   beforeEach(() => {
     vi.clearAllMocks();
+    Logger.reset();
     getInputsSpy = vi.spyOn(getInputsModule, 'getInputs').mockImplementation(() => ({
       languages: 'javascript',
       sourceRoot: '',
@@ -79,6 +81,51 @@ describe('action', () => {
     );
     expect(mockSarifProcessor.processSarifFile).toHaveBeenCalled();
     expect(mockIssueCreator.createIssuesFromSarif).toHaveBeenCalled();
+    expect(mockCore.setFailed).not.toHaveBeenCalled();
+  });
+
+  it('should stay green when vulnerabilities are found and issues are created', async () => {
+    // Finding vulnerabilities is a successful run: the action only fails when it
+    // could not do its job, never because of what the scan reported.
+    mockSarifProcessor.processSarifFile.mockReturnValue({
+      runs: [
+        {
+          results: [
+            { ruleId: 'js/file-access-to-http', message: { text: 'finding 1' } },
+            { ruleId: 'js/sql-injection', message: { text: 'finding 2' } },
+          ],
+        },
+      ],
+    });
+
+    await run();
+
+    expect(mockIssueCreator.createIssuesFromSarif).toHaveBeenCalled();
+    expect(mockCore.setFailed).not.toHaveBeenCalled();
+  });
+
+  it('should fail the run when an error was logged but not thrown', async () => {
+    mockIssueCreator.createIssuesFromSarif.mockImplementation(async () => {
+      Logger.error('❌ Failed to create issue: body is too long');
+    });
+
+    await run();
+
+    expect(mockCore.setFailed).toHaveBeenCalledWith(
+      expect.stringContaining('completed with 1 error(s)'),
+    );
+  });
+
+  it('should not double-report when the failure was already reported', async () => {
+    mockIssueCreator.createIssuesFromSarif.mockImplementation(async () => {
+      Logger.error('❌ Failed to create issue');
+      Logger.setFailed('Failed to create 1 of 1 issues');
+    });
+
+    await run();
+
+    expect(mockCore.setFailed).toHaveBeenCalledTimes(1);
+    expect(mockCore.setFailed).toHaveBeenCalledWith('Failed to create 1 of 1 issues');
   });
 
   it('should handle multiple languages by using the first one', async () => {

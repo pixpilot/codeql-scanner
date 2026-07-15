@@ -201,6 +201,64 @@ describe('issueCreator', () => {
       );
     });
 
+    it('should fail the action when an issue cannot be created', async () => {
+      const sarif = {
+        runs: [
+          {
+            results: [
+              {
+                ruleId: 'test-rule',
+                message: { text: 'Test security issue' },
+              },
+            ],
+          },
+        ],
+      };
+
+      mockOctokit.rest.issues.create.mockRejectedValue(
+        new Error('Validation Failed: body is too long (maximum is 65536 characters)'),
+      );
+
+      await IssueCreator.createIssuesFromSarif(sarif, 'test-token');
+
+      expect(mockLogger.setFailed).toHaveBeenCalledWith(
+        expect.stringContaining('Failed to create 1 of 1 issues'),
+      );
+    });
+
+    it('should fail the action on permission errors even when some issues succeed', async () => {
+      const sarif = {
+        runs: [
+          {
+            results: [
+              { ruleId: 'rule-1', message: { text: 'Issue 1' } },
+              { ruleId: 'rule-2', message: { text: 'Issue 2' } },
+            ],
+          },
+        ],
+      };
+
+      mockCrypto.createHash
+        .mockReturnValueOnce({
+          update: vi.fn().mockReturnThis(),
+          digest: vi.fn().mockReturnValue('aaaa1111'),
+        } as any)
+        .mockReturnValueOnce({
+          update: vi.fn().mockReturnThis(),
+          digest: vi.fn().mockReturnValue('bbbb2222'),
+        } as any);
+
+      mockOctokit.rest.issues.create
+        .mockResolvedValueOnce({ data: { number: 1 } } as any)
+        .mockRejectedValueOnce(new Error('Resource not accessible by integration'));
+
+      await IssueCreator.createIssuesFromSarif(sarif, 'test-token');
+
+      expect(mockLogger.setFailed).toHaveBeenCalledWith(
+        expect.stringContaining('1 permission error(s)'),
+      );
+    });
+
     it('should batch create multiple issues', async () => {
       const sarif = {
         runs: [
